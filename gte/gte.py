@@ -16,6 +16,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
 
+from .aux_log import Log0
+
+logZ = Log0()
+log0 = logZ.logger
+
 
 @dataclass
 class GTE:
@@ -64,7 +69,7 @@ class GTE:
     bem_model0 : list of mne.bem.ConductorModel or None
         MNE BEM model loaded from a -bem-model.fif file.
     bem_solution0 : mne.bem.ConductorModel or None
-        MNE BEM solution loaded from a -bem_solution.fif file.
+        MNE BEM solution loaded from a -bem-solution.fif file.
     fwd0 : mne.Forward or None
         MNE Forward solution loaded from a -fwd.fif file.
     montage0 : mne.channels.DigMontage or None
@@ -389,12 +394,12 @@ class GTE:
     @bem_solution0.setter
     def bem_solution0(self, fif_file: Union[str, Path]):
         """
-        Load MNE BEM solution from a -bem_solution.fif file and set it as the current bem_solution.
+        Load MNE BEM solution from a -bem-solution.fif file and set it as the current bem_solution.
 
         Parameters
         ----------
         fif_file : str or Path
-            Path to the -bem_solution.fif file to load the MNE BEM solution from.
+            Path to the -bem-solution.fif file to load the MNE BEM solution from.
 
         Raises
         ------
@@ -403,11 +408,11 @@ class GTE:
         RuntimeError
             If there's an error while reading the .fif file.
         """
-        fif_path = self._get_mne_file_path(fif_file, "-bem_solution.fif")
+        fif_path = self._get_mne_file_path(fif_file, "-bem-solution.fif")
         try:
             self._bem_solution0 = mne.read_bem_solution(fif_path)
         except Exception as e:
-            raise RuntimeError(f"Error reading -bem_solution.fif file: {str(e)}")
+            raise RuntimeError(f"Error reading -bem-solution.fif file: {str(e)}")
 
     @property
     def fwd0(self) -> Optional[mne.Forward]:
@@ -446,7 +451,7 @@ class GTE:
 
     def _get_mne_file_path(self, fif_file: Union[str, Path], suffix: str) -> Path:
         """
-        Helper method to get the full path for MNE files.
+        Provide helper method to get the full path for MNE files.
 
         Parameters
         ----------
@@ -481,8 +486,9 @@ class GTE:
         if not fif_path.exists():
             raise ValueError(f"The file '{fif_path}' does not exist.")
         if not fif_path.name.endswith(suffix):
-            raise ValueError(
-                f"The file '{fif_path}' should have the suffix '{suffix}'."
+            log0.warning(
+                f"The file '{fif_path}' does not end with '{suffix}' in its name. "
+                "Please make sure you know what you are doing."
             )
 
         return fif_path
