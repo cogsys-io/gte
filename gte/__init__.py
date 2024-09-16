@@ -3,8 +3,8 @@
 
 """Top-level package for Ground Truth Establisher (GTE)."""
 
-from .gte import GTE
-from .aux_log import Log0
+from .gte import GTE  # noqa: F401
+from .aux_log import Log0  # noqa: F401
 from .aux_pandas import df9  # noqa: F401
 from .aux_pandas import ddf  # noqa: F401
 from .aux_pandas import rdf  # noqa: F401
