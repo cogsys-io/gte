@@ -14,6 +14,7 @@ __email__ = "cogsys@cogsys.io"
 
 
 def get_module_version():
+    """Get module version."""
     return __version__
 
 
