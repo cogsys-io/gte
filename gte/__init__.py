@@ -5,6 +5,9 @@
 
 from .gte import GTE
 from .aux_log import Log0
+from .aux_pandas import df9  # noqa: F401
+from .aux_pandas import ddf  # noqa: F401
+from .aux_pandas import rdf  # noqa: F401
 
 # fmt: off
 from . import _version
