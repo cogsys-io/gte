@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-"""Top-level package for gte."""
+"""Top-level package for Ground Truth Establisher (GTE)."""
+
+from .gte import GTE
 from .aux_log import Log0
 
 # fmt: off
