@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 """Top-level package for gte."""
+from .aux_log import Log0
 
 # fmt: off
 from . import _version
