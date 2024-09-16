@@ -10,10 +10,11 @@ import numpy as np
 import pandas as pd
 import nibabel as nib
 import pathlib
+import mne
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Union
 
 
 @dataclass
@@ -23,7 +24,7 @@ class GTE:
 
     This class is designed to handle data gathering and perform simulations,
     primarily using MNE-Python. It provides functionality to manage subject
-    directories and individual subject data for simulations.
+    directories, individual subject data, and MNE Info objects for simulations.
 
     Attributes
     ----------
@@ -31,6 +32,8 @@ class GTE:
         Private attribute to store the subjects directory path.
     _subject : str or None
         Private attribute to store the current subject identifier.
+    _info0 : mne.Info or None
+        Private attribute to store the MNE Info object.
 
     Properties
     ----------
@@ -40,16 +43,17 @@ class GTE:
         Identifier for the current subject.
     subject_dir : Path or None
         Path to the current subject's directory.
+    info0 : mne.Info or None
+        MNE Info object loaded from a .fif file.
     """
 
     _subjects_dir: Optional[Path] = field(default=None, init=False)
     _subject: Optional[str] = field(default=None, init=False)
+    _info0: Optional[mne.Info] = field(default=None, init=False)
 
     def __post_init__(self):
-        """
-        Post-initialization method to set up default values if needed.
-        """
-        pass  # We don't need to do anything here now, as we're not setting defaults
+        """Post-initialization method to set up default values if needed."""
+        pass
 
     @staticmethod
     def _is_valid_dir(path: Path) -> bool:
@@ -164,5 +168,45 @@ class GTE:
         if self._subjects_dir is not None and self._subject is not None:
             return (self._subjects_dir / self._subject).resolve()
         return None
+
+    @property
+    def info0(self) -> Optional[mne.Info]:
+        """
+        Get the MNE Info object.
+
+        Returns
+        -------
+        mne.Info or None
+            The MNE Info object if loaded, otherwise None.
+        """
+        return self._info0
+
+    @info0.setter
+    def info0(self, fif_file: Union[str, Path]):
+        """
+        Load MNE Info from a .fif file and set it as the current info.
+
+        Parameters
+        ----------
+        fif_file : str or Path
+            Path to the .fif file to load the MNE Info from.
+
+        Raises
+        ------
+        ValueError
+            If the file does not exist or is not a .fif file.
+        RuntimeError
+            If there's an error while reading the .fif file.
+        """
+        fif_path = Path(fif_file).expanduser().resolve()
+        if not fif_path.exists():
+            raise ValueError(f"The file '{fif_path}' does not exist.")
+        if fif_path.suffix.lower() != ".fif":
+            raise ValueError(f"The file '{fif_path}' is not a .fif file.")
+
+        try:
+            self._info0 = mne.io.read_info(fif_path)
+        except Exception as e:
+            raise RuntimeError(f"Error reading .fif file: {str(e)}")
 
     # Additional methods for simulations can be added here
