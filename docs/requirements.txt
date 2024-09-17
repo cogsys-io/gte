@@ -33,3 +33,4 @@ mne
 srsly
 nibabel
 IPython
+scikit-learn
