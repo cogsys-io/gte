@@ -6,15 +6,20 @@
 Great stuff!
 
 """
+
+import random
 import numpy as np
 import pandas as pd
 import nibabel as nib
 import pathlib
 import mne
+from mne.simulation import SourceSimulator
+from mne.beamformer import Beamformer
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Optional, Union, List, Dict, Tuple
+from typing import get_origin, get_args
 
 from .aux_log import Log0
 
@@ -135,12 +140,17 @@ class GTE:
     _bem_model0: Optional[list] = field(default=None, init=False)
     _bem_solution0: Optional[mne.bem.ConductorModel] = field(default=None, init=False)
     _fwd0: Optional[mne.Forward] = field(default=None, init=False)
+    _genuine_noise_cov0: Optional[mne.Covariance] = None
 
     _annot0: Optional[str] = field(default=None, init=False)
     _labels0: Optional[List[mne.Label]] = field(default=None, init=False)
     _label0_names: Optional[str] = field(default=None, init=False)
     _labels2: Optional[List[mne.Label]] = field(default=None, init=False)
     _label2_names: Optional[str] = field(default=None, init=False)
+    _labels3: Optional[List[mne.Label]] = field(default=None, init=False)
+    _label3_names: Optional[str] = field(default=None, init=False)
+    _labels4: Optional[List[mne.Label]] = field(default=None, init=False)
+    _label4_names: Optional[str] = field(default=None, init=False)
 
     _singularity_events: Optional[np.ndarray] = field(default=None, init=False)
     _singularity_event_IDs: Optional[Dict[str, int]] = field(default=None, init=False)
@@ -153,6 +163,24 @@ class GTE:
         default=None, init=False
     )
     _experimental_events_df: Optional[pd.DataFrame] = field(default=None, init=False)
+    _activ0: Optional[Dict[str, Dict[str, Dict[str, float]]]] = field(
+        default=None, init=False
+    )
+    _activ0_labels: Optional[List[str]] = field(default=None, init=False)
+    _activ0_events: Optional[List[str]] = field(default=None, init=False)
+    _activ0_trial_num_samp: Optional[int] = field(default=None, init=False)
+    _times0: Optional[np.ndarray] = field(default=None, init=False)
+    _source_simulator: Optional[SourceSimulator] = field(default=None, init=False)
+    _activ0_stc: Optional[mne.SourceEstimate] = field(default=None, init=False)
+    _activ0_raw: Optional[mne.io.Raw] = field(default=None, init=False)
+    _activ2_raw: Optional[mne.io.Raw] = field(default=None, init=False)
+    _activ2_epochs: Optional[mne.Epochs] = field(default=None, init=False)
+    _activ2_evoked: Optional[Dict[str, mne.Evoked]] = field(default=None, init=False)
+    _activ2_data_cov: Optional[mne.Covariance] = field(default=None, init=False)
+    _activ2_noise_cov: Optional[mne.Covariance] = field(default=None, init=False)
+    _activ2_common_cov: Optional[mne.Covariance] = field(default=None, init=False)
+    _filters: Optional[Dict[str, Beamformer]] = field(default=None, init=False)
+    _stcs: Optional[Dict[str, mne.SourceEstimate]] = field(default=None, init=False)
 
     def __post_init__(self):
         """Post-initialization method to set up default values if needed."""
@@ -518,6 +546,58 @@ class GTE:
             raise RuntimeError(f"Error reading -fwd.fif file: {str(e)}")
 
     @property
+    def genuine_noise_cov0(self) -> Optional[mne.Covariance]:
+        """
+        Get the real noise covariance matrix.
+
+        Returns
+        -------
+        mne.Covariance or None
+            The MNE Covariance object representing the real noise covariance matrix if loaded,
+            otherwise None.
+
+        See Also
+        --------
+        genuine_noise_cov0.setter : Method to load the real noise covariance matrix from a file.
+        """
+        return self._genuine_noise_cov0
+
+    @genuine_noise_cov0.setter
+    def genuine_noise_cov0(self, fif_file: Union[str, Path]):
+        """
+        Load the real noise covariance matrix.
+
+        Load the real noise covariance matrix from a .fif file and set it as the current
+        real noise covariance.
+
+        Parameters
+        ----------
+        fif_file : str or Path
+            Path to the .fif file to load the real noise covariance matrix from.
+            The file name should follow the pattern:
+            "<subject>-<timestamp>-real-noise-cov.fif"
+            e.g., "phantomica-20240913T000907-real-noise-cov.fif"
+
+        Raises
+        ------
+        ValueError
+            If the file does not exist or does not match the expected naming pattern.
+        RuntimeError
+            If there's an error while reading the .fif file.
+
+        Notes
+        -----
+        This method uses the `_get_mne_file_path` helper method to resolve the file path
+        and ensure it exists and has the correct suffix.
+        """
+        fif_path = self._get_mne_file_path(fif_file, "-noise-cov.fif")
+        try:
+            self._genuine_noise_cov0 = mne.read_cov(fif_path)
+            log0.info(f"Real noise covariance matrix loaded from {fif_path}")
+        except Exception as e:
+            raise RuntimeError(f"Error reading real noise covariance file: {str(e)}")
+
+    @property
     def annot0(self) -> str:
         """
         Get the annotation string.
@@ -565,6 +645,78 @@ class GTE:
         """
         return self._label0_names
 
+    @property
+    def labels2(self) -> Optional[List[mne.Label]]:
+        """
+        Get the processed annotation labels.
+
+        Returns
+        -------
+        Optional[List[mne.Label]]
+            The processed annotation labels, or None if not set.
+        """
+        return self._labels2
+
+    @property
+    def label2_names(self) -> Optional[List[str]]:
+        """
+        Get the annotation label names.
+
+        Returns
+        -------
+        Optional[List[mne.Label]]
+            The current annotation labels, or None if not set.
+        """
+        return self._label2_names
+
+    @property
+    def labels3(self) -> Optional[List[mne.Label]]:
+        """
+        Get the annotation labels.
+
+        Returns
+        -------
+        Optional[List[mne.Label]]
+            The current annotation labels, or None if not set.
+        """
+        return self._labels3
+
+    @property
+    def label3_names(self) -> Optional[List[str]]:
+        """
+        Get the annotation label names.
+
+        Returns
+        -------
+        Optional[List[mne.Label]]
+            The current annotation labels, or None if not set.
+        """
+        return self._label3_names
+
+    @property
+    def labels4(self) -> Optional[List[mne.Label]]:
+        """
+        Get the annotation labels.
+
+        Returns
+        -------
+        Optional[List[mne.Label]]
+            The current annotation labels, or None if not set.
+        """
+        return self._labels4
+
+    @property
+    def label4_names(self) -> Optional[List[str]]:
+        """
+        Get the annotation label names.
+
+        Returns
+        -------
+        Optional[List[mne.Label]]
+            The current annotation labels, or None if not set.
+        """
+        return self._label4_names
+
     def read_labels_from_annot(
         self, regexp: Optional[str] = None, sort: bool = False, verbose: bool = False
     ) -> None:
@@ -607,30 +759,6 @@ class GTE:
             log0.error(f"Error reading labels from annotation: {str(e)}")
             raise
 
-    @property
-    def labels2(self) -> Optional[List[mne.Label]]:
-        """
-        Get the processed annotation labels.
-
-        Returns
-        -------
-        Optional[List[mne.Label]]
-            The processed annotation labels, or None if not set.
-        """
-        return self._labels2
-
-    @property
-    def label2_names(self) -> Optional[List[str]]:
-        """
-        Get the annotation label names.
-
-        Returns
-        -------
-        Optional[List[mne.Label]]
-            The current annotation labels, or None if not set.
-        """
-        return self._label2_names
-
     def process_labels0(
         self, location: str = "center", extent: float = 0.0, verbose: bool = False
     ) -> None:
@@ -669,7 +797,9 @@ class GTE:
                 extent=extent,
                 subjects_dir=self.subjects_dir,
             )
-            label2.name = f"source-label-{location}-{label0.name}"
+            # TODO FIXME not here but in labels4 update
+            # label2.name = f"source-label-{location}-{label0.name}"
+            label2.name = label0.name
 
             if verbose:
                 print(
@@ -745,7 +875,7 @@ class GTE:
         """
         if isinstance(event_labels, int):
             n_events = event_labels
-            leadz = len(str(n_events + 1))
+            leadz = len(str(n_events + 1)) + 1
             event_labels = [f"Ev{ii:0{leadz}d}" for ii in range(1, n_events + 1)]
         elif isinstance(event_labels, list) and all(
             isinstance(item, str) for item in event_labels
@@ -790,7 +920,7 @@ class GTE:
 
     def make_singularity_events(
         self,
-        event_labels: List[str] = ["singularity"],
+        event_labels: Union[int, List[str]] = ["singularity"],
         event_repets: int = 1,
         event_interv: int = 1000,
         event_begins: int = 5000,
@@ -853,7 +983,7 @@ class GTE:
 
     def make_experimental_events(
         self,
-        event_labels: List[str] = ["Ev1", "Ev2"],
+        event_labels: Union[int, List[str]] = ["Ev01", "Ev02"],
         event_repets: int = 100,
         event_interv: int = 2000,
         event_begins: int = 5000,
@@ -1099,6 +1229,1024 @@ class GTE:
         This property is populated by calling the `make_experimental_events` method.
         """
         return self._experimental_events_df
+
+    def generate_waveform(
+        self,
+        times: np.ndarray,
+        latency: float = 0.25,
+        duration: float = 0.20,
+        amplitude: float = 1,
+        scale: float = 1e-9,
+        rng: Optional[np.random.Generator] = None,
+    ) -> np.ndarray:
+        """
+        Generate source time courses for simulated evoked responses.
+
+        This method creates a time series that represents an evoked response
+        in neuroscience data, particularly useful for MEG/EEG simulations.
+        It combines a sinusoidal wave (representing oscillatory activity)
+        with a Gaussian envelope (representing the overall shape of the evoked response).
+
+        Parameters
+        ----------
+        times : np.ndarray
+            Time points at which to evaluate the function.
+        latency : float, optional
+            The center time of the evoked response (in same units as 'times').
+            Default is 0.25.
+        duration : float, optional
+            The duration of the evoked response (impacts the width of the Gaussian).
+            Default is 0.20.
+        amplitude : float, optional
+            The amplitude of the waveform. Default is 1.
+        scale : float, optional
+            Scaling factor for the amplitude. Default is 1e-9 (nanoamperes).
+        rng : np.random.Generator, optional
+            Random number generator for adding jitter. If None, np.random is used.
+
+        Returns
+        -------
+        np.ndarray
+            The generated time series of the evoked response.
+
+        Notes
+        -----
+        - The function uses a fixed frequency in the beta band (15 Hz).
+        - The amplitude is scaled to be in the order of nanoamperes (1e-9).
+        - A small random jitter is added to the peak of the Gaussian for variability.
+        """
+        # Define the oscillation frequency (e.g., beta band)
+        f = 15  # Hz
+        # Generate the sinusoidal component (oscillatory activity)
+        sinusoid = np.sin(2 * np.pi * f * (times - latency))
+        # Standard deviation for the Gaussian envelope
+        sigma = 0.100 * duration
+        # Generate the Gaussian envelope
+        # - Adding a small random jitter to the peak time
+        if rng is not None:
+            jitter = (sigma / 4.0) * rng.random()
+        else:
+            jitter = (sigma / 4.0) * np.random.rand()
+
+        gf = np.exp(-((times - latency - jitter) ** 2) / (2 * (sigma**2)))
+
+        # Combine sinusoid and Gaussian, and scale to nanoamperes
+        wf0 = sinusoid * gf * scale * amplitude
+        return wf0
+
+    @property
+    def activ0(self) -> Optional[Dict[str, Dict[str, Dict[str, float]]]]:
+        """
+        Get the predefined activations.
+
+        Returns
+        -------
+        Optional[Dict[str, Dict[str, Dict[str, float]]]]
+            A nested dictionary of predefined activations, or None if not set.
+        """
+        return self._activ0
+
+    @property
+    def activ0_labels(self) -> List[str]:
+        """
+        Get the sorted list of unique activation labels (brain regions).
+
+        Returns
+        -------
+        List[str]
+            Sorted list of unique activation labels.
+        """
+        return self._activ0_labels
+
+    @property
+    def activ0_events(self) -> List[str]:
+        """
+        Get the list of activation events.
+
+        Returns
+        -------
+        List[str]
+            List of activation events.
+        """
+        return self._activ0_events
+
+    def set_predefined_activations(
+        self,
+        activations: Optional[Dict[str, Dict[str, Dict[str, float]]]] = None,
+        event_repets: int = 100,
+        event_interv: int = 2000,
+        event_begins: int = 5000,
+    ) -> None:
+        """
+        Set predefined activations for different events and brain regions.
+
+        Parameters
+        ----------
+        activations : Optional[Dict[str, Dict[str, Dict[str, float]]]], optional
+            A nested dictionary of activations. If None, a default set of activations is used.
+            The structure is:
+            {
+                "Event1": {
+                    "Region1": {"lat": float, "dur": float, "amp": float},
+                    "Region2": {"lat": float, "dur": float, "amp": float},
+                    ...
+                },
+                "Event2": {
+                    ...
+                },
+                ...
+            }
+            Where:
+            - "lat" is latency
+            - "dur" is duration
+            - "amp" is amplitude
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This method sets the `activ0`, `activ0_labels`, and `activ0_events` properties of the class.
+        """
+        if activations is None:
+            activations = {
+                "Ev01": {
+                    "frontalpole_1-lh": dict(lat=0.35, dur=0.20, amp=300),
+                    "superiorfrontal_1-lh": dict(lat=0.25, dur=0.40, amp=320),
+                    "rostralmiddlefrontal_7-lh": dict(lat=0.45, dur=0.20, amp=320),
+                    "superiorparietal_3-rh": dict(lat=0.25, dur=0.60, amp=320),
+                },
+                "Ev02": {
+                    "superiorfrontal_1-lh": dict(lat=0.35, dur=0.20, amp=320),
+                    "superiorparietal_1-rh": dict(lat=0.45, dur=0.20, amp=440),
+                    "superiortemporal_1-lh": dict(lat=0.25, dur=0.40, amp=320),
+                    "precentral_13-lh": dict(lat=0.35, dur=0.20, amp=320),
+                    "lateraloccipital_2-rh": dict(lat=0.45, dur=0.30, amp=440),
+                    "lateraloccipital_4-lh": dict(lat=0.25, dur=0.20, amp=320),
+                },
+            }
+
+        self._activ0 = activations
+        self._activ0_labels = sorted(
+            set(key for inner_dict in activations.values() for key in inner_dict)
+        )
+        self._activ0_events = list(activations.keys())
+
+        self.make_experimental_events(
+            event_labels=self._activ0_events,
+            event_repets=event_repets,
+            event_interv=event_interv,
+            event_begins=event_begins,
+        )
+
+        self._labels4 = [
+            label for label in self._labels2 if label.name in self._activ0_labels
+        ]
+        self._label4_names = self._activ0_labels
+
+    def set_randomized_activations(
+        self,
+        num_labels: int,
+        num_labels_per_event: int,
+        event_labels: Union[int, List[str]],
+        event_repets: int = 100,
+        event_interv: int = 2000,
+        event_begins: int = 5000,
+        allow_label_repetition: bool = True,
+    ):
+        """
+        Set randomized activations.
+
+        Set randomized activations by sampling labels and assigning them to events,
+        and update experimental events to match.
+
+        This method first validates all inputs, then generates experimental events,
+        and finally creates random activations for these events.
+
+        Parameters
+        ----------
+        num_labels : int
+            Total number of unique labels to sample from self._label0_names.
+        num_labels_per_event : int
+            Number of labels to assign to each event.
+        event_labels : int or List[str]
+            If int, the number of unique events to generate. Event labels will be created
+            automatically as "Ev001", "Ev002", etc.
+            If List[str], custom labels for events. Must be unique.
+        event_repets : int, optional
+            Number of repetitions for each event. Default is 100.
+        event_interv : int, optional
+            Interval between events in samples. Default is 2000.
+        event_begins : int, optional
+            Sample number at which the first event begins. Default is 5000.
+        allow_label_repetition : bool, optional
+            If True, allows the same label to be used across different events.
+            If False, ensures each label is used only once. Default is True.
+
+        Returns
+        -------
+        None
+
+        Notes
+        -----
+        This method updates the following class attributes:
+        - _activ0 : Dict containing the randomized activations
+        - _activ0_labels : List of unique activation labels
+        - _activ0_events : List of event names
+        - Experimental event attributes (_experimental_events, _experimental_event_IDs, etc.)
+
+        Raises
+        ------
+        ValueError
+            - If there are not enough labels in self._label0_names.
+            - If the number of labels per event * number of events > total number of labels
+              (when allow_label_repetition is False).
+            - If event_labels is neither an integer nor a list of strings.
+
+        Examples
+        --------
+        >>> gte = GTE()
+        >>> gte.set_randomized_activations(
+        ...     num_labels=20,
+        ...     num_labels_per_event=3,
+        ...     event_labels=["Event1", "Event2", "Event3"],
+        ...     event_repets=50,
+        ...     allow_label_repetition=True
+        ... )
+        """
+        # FIXME IMPORTANT
+        """
+        raise NotImplementedError(
+            "The 'publish' method is not implemented yet. Stay tuned for future updates!"
+        )
+        """
+
+        # Validate inputs
+        if isinstance(event_labels, int):
+            num_events = event_labels
+            leadz = len(str(num_events + 1)) + 1
+            event_names = [f"Ev{ii:0{leadz}d}" for ii in range(1, num_events + 1)]
+        elif isinstance(event_labels, list) and all(
+            isinstance(label, str) for label in event_labels
+        ):
+            event_names = event_labels
+            num_events = len(event_names)
+        else:
+            raise ValueError(
+                "event_labels must be either an integer or a list of strings"
+            )
+
+        if len(self._label0_names) < num_labels:
+            raise ValueError(
+                f"Not enough labels. Required: {num_labels}, Available: {len(self._label0_names)}"
+            )
+
+        if (
+            not allow_label_repetition
+            and num_labels_per_event * num_events > num_labels
+        ):
+            raise ValueError(
+                f"Too many labels per event. Max possible: {num_labels // num_events} when allow_label_repetition is False"
+            )
+
+        # Generate experimental events
+        self.make_experimental_events(
+            event_labels=event_names,
+            event_repets=event_repets,
+            event_interv=event_interv,
+            event_begins=event_begins,
+        )
+
+        # Sample labels
+        sampled_labels = random.sample(self._label0_names, num_labels)
+
+        # Initialize the activations dictionary
+        activations = {event: {} for event in event_names}
+
+        # Assign labels to events
+        for event in event_names:
+            if allow_label_repetition:
+                event_labels = random.choices(sampled_labels, k=num_labels_per_event)
+            else:
+                event_labels = random.sample(sampled_labels, num_labels_per_event)
+
+            for label in event_labels:
+                activations[event][label] = {
+                    "lat": round(random.uniform(0.1, 0.4), 2),
+                    "dur": round(random.uniform(0.1, 0.4), 2),
+                    "amp": round(random.uniform(200, 500), 2),
+                }
+
+        # Update class properties
+        self._activ0 = activations
+        self._activ0_labels = sorted(
+            set(label for event in activations.values() for label in event)
+        )
+        self._activ0_events = event_names
+        self._labels4 = [
+            label for label in self._labels2 if label.name in self._activ0_labels
+        ]
+        self._label4_names = self._activ0_labels
+
+        log0.info(
+            f"Randomized activations set for {num_events} events with {num_labels} total labels."
+        )
+
+    def activations_to_dataframe(self) -> pd.DataFrame:
+        """
+        Convert the predefined activations to a pandas DataFrame.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame representation of the activations, with columns:
+            'Event', 'Region', 'Latency', 'Duration', 'Amplitude'
+
+        Raises
+        ------
+        ValueError
+            If activations have not been set (activ0 is None).
+        """
+        if self._activ0 is None:
+            raise ValueError(
+                "Activations have not been set. Use set_predefined_activations() first."
+            )
+
+        data = []
+        for event, regions in self._activ0.items():
+            for region, params in regions.items():
+                data.append(
+                    {
+                        "Event": event,
+                        "Region": region,
+                        "Latency": params["lat"],
+                        "Duration": params["dur"],
+                        "Amplitude": params["amp"],
+                    }
+                )
+
+        return pd.DataFrame(data)
+
+    @property
+    def activ0_trial_num_samp(self) -> int:
+        """
+        Get the number of samples for the activation trial.
+
+        Returns
+        -------
+        int
+            The number of samples for the activation trial.
+        """
+        if self._activ0_trial_num_samp is None:
+            self._activ0_trial_num_samp = 1000  # Default value
+        return self._activ0_trial_num_samp
+
+    @activ0_trial_num_samp.setter
+    def activ0_trial_num_samp(self, value: int):
+        """
+        Set the number of samples for the activation trial.
+
+        Parameters
+        ----------
+        value : int
+            The number of samples to set for the activation trial.
+        """
+        self._activ0_trial_num_samp = value
+
+    @property
+    def times0(self) -> np.ndarray:
+        """
+        Get the times array.
+
+        Returns
+        -------
+        np.ndarray
+            A 1D array of time points based on the number of samples and sampling frequency.
+        """
+        if self._info0 is None:
+            raise ValueError("The _info0 property must be set before accessing times0.")
+
+        return (
+            np.arange(self._activ0_trial_num_samp, dtype=np.float64)
+            / self._info0["sfreq"]
+        )
+
+    @times0.setter
+    def times0(self, value: np.ndarray):
+        """
+        Set the times array. This should be calculated based on the activation trial sample count and info0.
+
+        Parameters
+        ----------
+        value : np.ndarray
+            A new times array to set.
+        """
+        raise NotImplementedError("The 'time0' setter method is not implemented yet.")
+        self._times0 = value
+
+    @property
+    def source_simulator(self) -> Optional[SourceSimulator]:
+        """
+        Get the SourceSimulator object.
+
+        Returns
+        -------
+        Optional[mne.simulation.SourceSimulator]
+            The SourceSimulator object if initialized, otherwise None.
+        """
+        return self._source_simulator
+
+    def initialize_source_simulator(self):
+        """
+        Initialize and store a SourceSimulator object based on _src0 and _info0.
+
+        This method creates a SourceSimulator object using the source space (_src0)
+        and the sampling frequency from the measurement info (_info0). The created
+        SourceSimulator is stored in the _source_simulator attribute.
+
+        Returns
+        -------
+        None
+
+        Raises
+        ------
+        ValueError
+            If _src0 or _info0 is not set.
+
+        Notes
+        -----
+        This method should be called after _src0 and _info0 have been properly set.
+        The SourceSimulator object can be accessed via the source_simulator property
+        after initialization.
+
+        Examples
+        --------
+        >>> gte = GTE()
+        >>> gte.set_src0(...)  # Set the source space
+        >>> gte.set_info0(...)  # Set the measurement info
+        >>> gte.initialize_source_simulator()
+        >>> sim = gte.source_simulator
+        """
+        if self._src0 is None:
+            raise ValueError(
+                "Source space (_src0) must be set before initializing SourceSimulator."
+            )
+        if self._info0 is None:
+            raise ValueError(
+                "Measurement info (_info0) must be set before initializing SourceSimulator."
+            )
+
+        src = self._src0
+        tstep = 1 / self._info0["sfreq"]
+
+        try:
+            self._source_simulator = SourceSimulator(src, tstep=tstep)
+            log0.info(f"SourceSimulator initialized with tstep={tstep:.6f}s")
+        except Exception as e:
+            log0.error(f"Failed to initialize SourceSimulator: {str(e)}")
+            raise
+
+    def add_data_to_source_simulator(self):
+        """
+        Add activation data to the source simulator using the internal attributes.
+
+        This method uses `_activ0`, `_experimental_event_IDs`, and `_experimental_events` attributes
+        to add data to the source simulator.
+
+        Raises
+        ------
+        AssertionError
+            If the label is not found in the labels list.
+        ValueError
+            If the source simulator is not initialized or if required data is missing.
+        """
+        if self._source_simulator is None:
+            raise ValueError(
+                "Source simulator is not initialized. Call initialize_source_simulator first."
+            )
+
+        if self._activ0 is None:
+            raise ValueError(
+                "Activation data (_activ0) is not set. Set activations before calling this method."
+            )
+
+        if self._experimental_event_IDs is None or self._experimental_events is None:
+            raise ValueError(
+                "Experimental events (_experimental_event_IDs or _experimental_events) are not set."
+            )
+
+        for act_idx, (act_key, act_val) in enumerate(self._activ0.items()):
+            # Get the event code corresponding to the activation key
+            act_code = self._experimental_event_IDs[act_key]
+            # Filter events for the current activation key
+            tmp_events = self._experimental_events[
+                np.where(self._experimental_events[:, 2] == act_code)[0], :
+            ]
+            log0.warning(f"{act_idx}: {act_key} [{act_code}] {tmp_events.shape}")
+
+            # Loop through each label and add data to the source simulator
+            for lab_idx, (lab_name, lab_params) in enumerate(act_val.items()):
+                log0.warning(f"- {lab_idx}: {lab_name} --- {lab_params}")
+
+                # Find the corresponding label in the labels4x0 (self._labels4)
+                tmp_label = [label for label in self._labels4 if label.name == lab_name]
+                assert (
+                    len(tmp_label) == 1
+                ), f"PROBLEM with label {lab_name!r} selection!"
+                tmp_label = tmp_label[0]
+                log0.warning(f"  - {tmp_label = }")
+
+                # Extract activation parameters
+                tmp_lat = lab_params["lat"]
+                tmp_dur = lab_params["dur"]
+                tmp_amp = lab_params["amp"]
+                log0.warning(f"  - {tmp_lat = }, {tmp_dur = }, {tmp_amp = }")
+
+                # Generate the waveform for this label's activation
+                tmp_wf = self.generate_waveform(
+                    times=self.times0,
+                    latency=tmp_lat,
+                    duration=tmp_dur,
+                    amplitude=tmp_amp,
+                )
+
+                # Add data to the source simulator
+                self._source_simulator.add_data(tmp_label, tmp_wf, tmp_events)
+                log0.warning(
+                    f"  - data added source waveform to source simulator for {lab_name}"
+                )
+
+    @property
+    def activ0_stc(self):
+        """
+        Get the cached source time course (STC).
+
+        Returns
+        -------
+        stc : mne.SourceEstimate
+            The cached source estimate (STC) stored in the class.
+
+        Raises
+        ------
+        ValueError
+            If the activ0_stc has not been set yet.
+        """
+        if self._activ0_stc is None:
+            raise ValueError(
+                "activ0_stc has not been extracted yet. Use extract_activ0_stc to set it."
+            )
+        return self._activ0_stc
+
+    def extract_activ0_stc(self):
+        """
+        Set the source time course (STC) from the source simulator and cache it.
+
+        This method runs the source simulator's `get_stc()` method and stores the
+        result in `_activ0_stc` for future use.
+
+        Raises
+        ------
+        ValueError
+            If the source simulator is not initialized or if no data is available in the simulator.
+        """
+        if self._source_simulator is None:
+            raise ValueError(
+                "Source simulator is not initialized. Call initialize_source_simulator first."
+            )
+
+        self._activ0_stc = self._source_simulator.get_stc()
+
+    @property
+    def activ0_raw(self):
+        """
+        Get the cached time course (Raw).
+
+        Returns
+        -------
+        stc : mne.io.Raw
+            The cached time course (Raw) stored in the class.
+
+        Raises
+        ------
+        ValueError
+            If the activ0_raw has not been set yet.
+        """
+        if self._activ0_raw is None:
+            raise ValueError(
+                "activ0_raw has not been extracted yet. Use extract_activ0_raw to set it."
+            )
+        return self._activ0_raw
+
+    @property
+    def activ2_raw(self):
+        """
+        Get the cached time course (Raw) with noise added.
+
+        Returns
+        -------
+        stc : mne.io.Raw
+            The cached time course (Raw) stored in the class.
+
+        Raises
+        ------
+        ValueError
+            If the activ2_raw has not been set yet.
+        """
+        if self._activ2_raw is None:
+            raise ValueError(
+                "activ2_raw has not been extracted yet. Use extract_activ2_raw to set it."
+            )
+        return self._activ2_raw
+
+    def extract_activ0_raw(self):
+        """
+        Set the time course (Raw) from the source simulator and cache it.
+
+        This method runs the source simulator's `get_stc()` method and stores the
+        result in `_activ0_raw` for future use.
+
+        Raises
+        ------
+        ValueError
+            If the source simulator is not initialized or if no data is available in the simulator.
+        """
+        if self._source_simulator is None:
+            raise ValueError(
+                "Source simulator is not initialized. Call initialize_source_simulator first."
+            )
+
+        self._activ0_raw = mne.simulation.simulate_raw(
+            info=self._info0,
+            stc=self._source_simulator,
+            src=None,  # Can be None if forward is provided.
+            bem=None,  # Can be None if forward is provided.
+            forward=self._fwd0,
+            verbose=True,
+            n_jobs=12,
+        )
+        events_annot4x0 = mne.annotations_from_events(
+            events=self._experimental_events,
+            sfreq=self._activ0_raw.info["sfreq"],
+            event_desc=self.experimental_events_desc,
+        )
+        self._activ0_raw.set_annotations(events_annot4x0)
+        self._activ0_raw.set_eeg_reference(projection=True)
+
+    def extract_activ2_raw(self):
+        """
+        Set the time course (Raw) from the source simulator and cache it.
+
+        This method runs the source simulator's `get_stc()` method and stores the
+        result in `_activ0_raw` for future use.
+
+        Raises
+        ------
+        ValueError
+            If the source simulator is not initialized or if no data is available in the simulator.
+        """
+        if self._activ0_raw is None:
+            raise ValueError(
+                "Clean _activ0_raw data is not initialized. Call extract_activ2_raw first."
+            )
+
+        self._activ2_raw = self._activ0_raw.copy()
+        mne.simulation.add_noise(
+            self._activ2_raw, cov=self._genuine_noise_cov0, random_state=0
+        )
+        mne.simulation.add_eog(self._activ2_raw, random_state=0)
+        if len(mne.pick_types(self._activ2_raw.info, meg=True)) > 0:
+            mne.simulation.add_ecg(self._activ2_raw, random_state=0)
+
+    @property
+    def activ2_epochs(self):
+        """
+        Get the cached time course (Epochs).
+
+        Returns
+        -------
+        stc : mne.Epochs
+            The cached time course (Epochs) stored in the class.
+
+        Raises
+        ------
+        ValueError
+            If the activ2_epochs has not been set yet.
+        """
+        if self._activ2_epochs is None:
+            raise ValueError(
+                "activ2_epochs has not been extracted yet. Use extract_activ2_epochs_and_evoked to set it."
+            )
+        return self._activ2_epochs
+
+    @property
+    def activ2_evoked(self):
+        """
+        Get the cached time course (Evoked).
+
+        Returns
+        -------
+        stc : mne.Evoked
+            The cached time course (Evoked) stored in the class.
+
+        Raises
+        ------
+        ValueError
+            If the activ2_evoked has not been set yet.
+        """
+        if self._activ2_evoked is None:
+            raise ValueError(
+                "activ2_evoked has not been extracted yet. Use extract_activ2_epochs_and_evoked to set it."
+            )
+        return self._activ2_evoked
+
+    def extract_activ2_epochs_and_evoked(self):
+        """
+        Extract epochs.
+
+        Raises
+        ------
+        ValueError
+            If the raw data is not initialized or if no data is available in the simulator.
+        """
+        if self._activ2_raw is None:
+            raise ValueError(
+                "Clean _activ2_raw data is not initialized. Call extract_activ2_raw first."
+            )
+
+        self._activ2_epochs = mne.Epochs(
+            self._activ2_raw,
+            self._experimental_events,
+            self._experimental_event_IDs,
+            tmin=-0.4,  # TODO FIXME Add this as an argument
+            tmax=1.2,  # TODO FIXME Add this as an argument
+            baseline=(None, 0),  # TODO FIXME Add this as an argument
+        )
+
+        self._activ2_evoked = {}
+        for ev in self._experimental_event_IDs.keys():
+            self._activ2_evoked[ev] = self._activ2_epochs[ev].average()
+
+    @property
+    def activ2_data_cov(self) -> Optional[mne.Covariance]:
+        """
+        Get the data covariance.
+
+        Returns
+        -------
+        Optional[mne.Covariance]
+            The data covariance if set, otherwise None.
+        """
+        return self._activ2_data_cov
+
+    @property
+    def activ2_noise_cov(self) -> Optional[mne.Covariance]:
+        """
+        Get the noise covariance.
+
+        Returns
+        -------
+        Optional[mne.Covariance]
+            The noise covariance if set, otherwise None.
+        """
+        return self._activ2_noise_cov
+
+    @property
+    def activ2_common_cov(self) -> Optional[mne.Covariance]:
+        """
+        Get the common covariance.
+
+        Returns
+        -------
+        Optional[mne.Covariance]
+            The common covariance if set, otherwise None.
+        """
+        return self._activ2_common_cov
+
+    def compute_covariances(
+        self,
+        data_tmin: float = 0.01,
+        data_tmax: float = 0.60,
+        noise_tmin: Optional[float] = None,
+        noise_tmax: float = 0,
+        method: str = "empirical",
+    ):
+        """
+        Compute and set data, noise, and common covariances.
+
+        This method computes the data covariance, noise covariance, and common covariance
+        using the specified time ranges and method.
+
+        Parameters
+        ----------
+        data_tmin : float, optional
+            Start time for data covariance computation. Default is 0.01.
+        data_tmax : float, optional
+            End time for data covariance computation. Default is 0.60.
+        noise_tmin : float or None, optional
+            Start time for noise covariance computation. Default is None.
+        noise_tmax : float, optional
+            End time for noise covariance computation. Default is 0.
+        method : str, optional
+            Method to compute covariance. Default is "empirical".
+
+        Raises
+        ------
+        ValueError
+            If _activ2_epochs is not set.
+
+        Notes
+        -----
+        This method sets _activ2_data_cov, _activ2_noise_cov, and _activ2_common_cov.
+        """
+        if self._activ2_epochs is None:
+            raise ValueError("_activ2_epochs must be set before computing covariances.")
+
+        self._activ2_data_cov = mne.compute_covariance(
+            self._activ2_epochs, tmin=data_tmin, tmax=data_tmax, method=method
+        )
+
+        self._activ2_noise_cov = mne.compute_covariance(
+            self._activ2_epochs, tmin=noise_tmin, tmax=noise_tmax, method=method
+        )
+
+        self._activ2_common_cov = self._activ2_data_cov + self._activ2_noise_cov
+
+        log0.info("Data, noise, and common covariances computed and set.")
+
+    @property
+    def filters(self) -> Optional[Dict[str, Beamformer]]:
+        """
+        Get the LCMV beamformer filters.
+
+        Returns
+        -------
+        Optional[Dict[str, mne.beamformer.Beamformer]]
+            Dictionary of LCMV beamformer filters for each condition, or None if not computed.
+            Each filter is an instance of mne.beamformer.Beamformer.
+        """
+        return self._filters
+
+    @property
+    def stcs(self) -> Optional[Dict[str, mne.SourceEstimate]]:
+        """
+        Get the source estimates computed by applying LCMV beamformer filters.
+
+        Returns
+        -------
+        Optional[Dict[str, mne.SourceEstimate]]
+            Dictionary of source estimates for each condition, or None if not computed.
+        """
+        return self._stcs
+
+    def compute_lcmv_filters(
+        self,
+        pick_ori: str = "vector",
+        weight_norm: str = "unit-noise-gain-invariant",
+        reg: float = 0.05,
+        lcmv_func: callable = mne.beamformer.make_lcmv,
+    ):
+        """
+        Compute LCMV beamformer filters for each condition in _activ2_evoked.
+
+        Parameters
+        ----------
+        pick_ori : str, optional
+            Orientation selection strategy. Default is "vector".
+        weight_norm : str, optional
+            Type of weight normalization. Default is "unit-noise-gain-invariant".
+        reg : float, optional
+            Regularization parameter. Default is 0.05.
+
+        Raises
+        ------
+        ValueError
+            If required attributes (__activ2_evoked, _fwd0, _activ2_data_cov, _activ2_noise_cov) are not set.
+
+        Notes
+        -----
+        This method computes LCMV beamformer filters (mne.beamformer.Beamformer objects)
+        for each condition and stores them in the _filters attribute.
+        The default parameters are set to:
+        - pick_ori: "vector" for vector beamformer
+        - weight_norm: "unit-noise-gain-invariant" for unit-noise gain beamformer
+        """
+        if (
+            self._activ2_evoked is None
+            or self._fwd0 is None
+            or self._activ2_data_cov is None
+            or self._activ2_noise_cov is None
+        ):
+            raise ValueError(
+                "Evoked data, forward solution, and covariances must be set before computing filters."
+            )
+
+        self._filters = {}
+        for key, val in self._activ2_evoked.items():
+            self._filters[key] = lcmv_func(
+                info=val.info,
+                forward=self._fwd0,
+                data_cov=self._activ2_data_cov,
+                reg=reg,
+                noise_cov=self._activ2_noise_cov,
+                pick_ori=pick_ori,
+                weight_norm=weight_norm,
+                rank=None,
+            )
+
+        log0.info(
+            f"LCMV beamformer filters computed for {len(self._filters)} conditions "
+            f"with pick_ori='{pick_ori}' and weight_norm='{weight_norm}'."
+        )
+
+    def apply_lcmv_filters(self):
+        """
+        Apply LCMV beamformer filters to the evoked data and store the results.
+
+        This method applies the previously computed LCMV beamformer filters
+        to the evoked data to create source estimates, and stores them in the _stcs attribute.
+
+        Raises
+        ------
+        ValueError
+            If filters or evoked data are not set.
+
+        Notes
+        -----
+        The resulting source estimates can be accessed via the stcs property after calling this method.
+        """
+        if self._filters is None or self._activ2_evoked is None:
+            raise ValueError(
+                "Filters and evoked data must be set before applying filters."
+            )
+
+        self._stcs = {}
+        for key, filter in self._filters.items():
+            self._stcs[key] = mne.beamformer.apply_lcmv(
+                self._activ2_evoked[key], filter
+            )
+
+        log0.info(
+            f"LCMV beamformer applied to {len(self._stcs)} conditions. "
+            "Source estimates stored in stcs property."
+        )
+
+    def story(self) -> pd.DataFrame:
+        """
+        List all properties of the GTE dataclass object with their declared and actual types.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame with columns:
+            - 'Name': The name of the property (str)
+            - 'Declared Type': The type declared in the class definition (str)
+            - 'Actual Type': The type of the current value of the property (str)
+            - 'Is Optional': Whether the property is declared as Optional (bool)
+
+        Notes
+        -----
+        This method uses the dataclasses.fields() function to introspect
+        the class structure. It includes both regular fields and properties.
+        The 'Actual Type' column shows 'None' for properties with no current value.
+
+        Examples
+        --------
+        >>> gte = GTE()
+        >>> gte.subjects_dir = Path("/path/to/subjects")
+        >>> properties_df = gte.list_properties()
+        >>> print(properties_df)
+        """
+        properties = []
+        for f in fields(self):
+            value = getattr(self, f.name)
+            declared_type = f.type
+            actual_type = type(value).__name__ if value is not None else "None"
+            is_optional = False
+
+            # Check if the declared type is Optional
+            if get_origin(declared_type) is Union:
+                args = get_args(declared_type)
+                if type(None) in args:
+                    is_optional = True
+                    # Remove NoneType from args to get the actual type
+                    other_args = [arg for arg in args if arg is not type(None)]
+                    declared_type = (
+                        other_args[0]
+                        if len(other_args) == 1
+                        else Union[tuple(other_args)]
+                    )
+
+            properties.append(
+                {
+                    "Name": f.name,
+                    "Declared Type": str(declared_type),
+                    "Actual Type": actual_type,
+                    "Is Optional": is_optional,
+                }
+            )
+
+        return pd.DataFrame(properties)
 
     def publish(self):
         """
