@@ -31,3 +31,4 @@ numpy
 pandas
 mne
 srsly
+nibabel
