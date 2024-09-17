@@ -1,0 +1,1672 @@
+#+title: i6001 Gte Package Devel
+
+#+PROPERTY: header-args:python  :tangle   no
+#+PROPERTY: header-args:python  :tangle   yes
+
+#+PROPERTY: header-args:python+ :shebang  "#!/usr/bin/env ipython\n# -*- coding: utf-8 -*-\n\n"
+#+PROPERTY: header-args:python+ :eval     yes
+#+PROPERTY: header-args:python+ :comments org
+#+PROPERTY: header-args:python+ :results  raw drawer pp
+#+PROPERTY: header-args:python+ :results  raw drawer
+#+PROPERTY: header-args:python+ :exports  both
+#+PROPERTY: header-args:python+ :async    yes
+#+PROPERTY: header-args:python+ :display  plain
+
+#+PROPERTY: header-args:python+ :session  python3 :kernel python3
+#+PROPERTY: header-args:python+ :session  remote_fast8_jiko_at_buka2 :kernel remote_fast8_jiko_at_buka2
+#+PROPERTY: header-args:python+ :session  local_py3p11 :kernel local_py3p11
+#+PROPERTY: header-args:python+ :session  local_py3p11v2 :kernel local_py3p11v2
+#+PROPERTY: header-args:python+ :session  local_fast4 :kernel local_fast4
+#+PROPERTY: header-args:python+ :session  local_fast8 :kernel local_fast8
+#+PROPERTY: header-args:python+ :session  local_gte0 :kernel local_mne0
+
+
+* Screenshots
+
+[[file:img/screenshot-from-2024-09-15-07-57-02.png]]
+
+[[file:img/screenshot-from-2024-09-17-08-04-55.png]]
+
+[[file:img/screenshot-from-2024-09-17-08-05-25.png]]
+
+[[file:img/screenshot-from-2024-09-17-08-06-24.png]]
+
+* Init
+** Development
+#+begin_src python :async yes
+import os
+# os.environ['QT_NO_GLIB'] = '1'
+# os.environ['SESSION_MANAGER'] = ''
+
+devel_mode = False
+devel_mode = True
+if devel_mode:
+    get_ipython().run_line_magic("load_ext", "autoreload")
+    get_ipython().run_line_magic("autoreload", "2")
+
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+The autoreload extension is already loaded. To reload it, use:
+  %reload_ext autoreload
+#+end_example
+:end:
+
+** Imports
+#+begin_src python :async yes
+import mne
+import gte
+import pathlib
+import numpy as np
+import srsly
+
+import matplotlib
+from matplotlib import pyplot as plt
+
+from gte import GTE
+from gte import Log0
+from gte import GTE  # noqa: F401
+from gte import ddf  # noqa: F401
+from gte import rdf  # noqa: F401
+
+
+#+end_src
+
+#+RESULTS:
+:results:
+:end:
+
+** Init
+#+begin_src python :async yes
+get_ipython().run_line_magic("matplotlib", "qt")
+
+logZ = Log0()
+log0 = logZ.logger
+
+gte = GTE()
+log0.warning(f"{gte = }")
+None
+#+end_src
+
+#+RESULTS:
+:results:
+: W: gte = GTE(_subjects_dir=None, _subject=None, _info0=None, _montage0=None, _trans0=None, _src0=None, _bem_model0=None, _bem_solution0=None, _fwd0=None, _genuine_noise_cov0=None, _annot0=None, _labels0=None, _label0_names=None, _labels2=None, _label2_names=None, _labels3=None, _label3_names=None, _labels4=None, _label4_names=None, _singularity_events=None, _singularity_event_IDs=None, _singularity_events_desc=None, _singularity_events_df=None, _experimental_events=None, _experimental_event_IDs=None, _experimental_events_desc=None, _experimental_events_df=None, _activ0=None, _activ0_labels=None, _activ0_events=None, _activ0_trial_num_samp=None, _times0=None, _source_simulator=None, _activ0_stc=None, _activ0_raw=None, _activ2_raw=None, _activ2_epochs=None, _activ2_evoked=None)
+:end:
+
+** Init: =gte.subjects_dir= and =gte.subject=
+#+begin_src python :async yes
+gte.subjects_dir = pathlib.Path().home()/"mount/data/subjects/"
+log0.info(f"{gte.subjects_dir = }")
+
+gte.subject = "phantomica-20240913T000907"
+log0.info(f"{gte.subject = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+I: gte.subjects_dir = PosixPath('/home/jiko/mount/data/subjects')
+I: gte.subject = 'phantomica-20240913T000907'
+#+end_example
+:end:
+
+** Init: =gte.info0=
+#+begin_src python :async yes
+gte.info0 = gte.subjects_dir/gte.subject/f"aux/mne/{gte.subject}-basic-info.fif"
+gte.info0 = f"{gte.subject}-basic-info.fif"
+log0.info(f"{gte.info0 = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+I: gte.info0 = <Info | 10 non-empty values
+ bads: []
+ ch_names: Fp1, Fpz, Fp2, AF7, AF3, AF4, AF8, F7, F5, F3, F1, Fz, F2, F4, ...
+ chs: 61 EEG
+ custom_ref_applied: False
+ dig: 64 items (3 Cardinal, 61 EEG)
+ file_id: 4 items (dict)
+ highpass: 0.0 Hz
+ lowpass: 500.0 Hz
+ meas_date: unspecified
+ meas_id: 4 items (dict)
+ nchan: 61
+ projs: []
+ sfreq: 1000.0 Hz
+>
+#+end_example
+:end:
+
+** Init: =gte.trans0=
+#+begin_src python :async yes
+gte.trans0 = f"{gte.subject}-head-mri-trans.fif"
+log0.info(f"{gte.trans0 = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+I: gte.trans0 = <Transform | head->MRI (surface RAS)>
+[[ 0.99917817 -0.0083337   0.03966784  0.00059106]
+ [ 0.01419157  0.98861903 -0.14976975  0.00896041]
+ [-0.03796825  0.15020962  0.98792481  0.01880399]
+ [ 0.          0.          0.          1.        ]]
+#+end_example
+:end:
+
+** Init: =gte.montage0=
+#+begin_src python :async yes
+gte.montage0 = f"{gte.subject}-basic-montage.fif"
+log0.info(f"{gte.montage0 = }")
+#+end_src
+
+#+RESULTS:
+:results:
+: I: gte.montage0 = <DigMontage | 0 extras (headshape), 0 HPIs, 3 fiducials, 61 channels>
+:end:
+
+** Init: =gte.src0=
+#+begin_src python :async yes
+""" OPTIONS:
+gte.src0 = f"{gte.subject}-src-ico5.fif"
+gte.src0 = f"{gte.subject}-src-oct6.fif"
+"""
+gte.src0 = f"{gte.subject}-src-oct6.fif"
+log0.info(f"{gte.src0 = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+W: The file '/home/jiko/mount/data/subjects/phantomica-20240913T000907/aux/mne/phantomica-20240913T000907-src-oct6.fif' does not end with '-src.fif' in its name. Please make sure you know what you are doing.
+    Reading a source space...
+    Computing patch statistics...
+    Patch information added...
+    Distance information added...
+    [done]
+    Reading a source space...
+    Computing patch statistics...
+    Patch information added...
+/home/jiko/cc/dev/2024/20240906T200711-gte-python-package/gte/gte/gte.py:433: RuntimeWarning: This filename (/home/jiko/mount/data/subjects/phantomica-20240913T000907/aux/mne/phantomica-20240913T000907-src-oct6.fif) does not conform to MNE naming conventions. All source space files should end with -src.fif, -src.fif.gz, _src.fif, _src.fif.gz, -fwd.fif, -fwd.fif.gz, _fwd.fif, _fwd.fif.gz, -inv.fif, -inv.fif.gz, _inv.fif or _inv.fif.gz
+  self._src0 = mne.read_source_spaces(fif_path)
+    Distance information added...
+    [done]
+    2 source spaces read
+I: gte.src0 = <SourceSpaces: [<surface (lh), n_vertices=138145, n_used=4098>, <surface (rh), n_vertices=136972, n_used=4098>] MRI (surface RAS) coords, subject 'phantomica-20240913T000907', ~24.3 MB>
+#+end_example
+:end:
+
+** Init: =gte.bem_model0=
+#+begin_src python :async yes
+""" OPTIONS:
+gte.bem_model0 = f"{gte.subject}-bem-model-ico3.fif"
+gte.bem_model0 = f"{gte.subject}-bem-model-ico4.fif"
+gte.bem_model0 = f"{gte.subject}-bem-model-ico5.fif"
+"""
+gte.bem_model0 = f"{gte.subject}-bem-model-ico4.fif"
+log0.info(f"{type(gte.bem_model0) = }")
+log0.info(f"{len(gte.bem_model0) = }")
+log0.info(f"{type(gte.bem_model0[0]) = }")
+log0.info(f"{len(gte.bem_model0[0]) = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+W: The file '/home/jiko/mount/data/subjects/phantomica-20240913T000907/aux/mne/phantomica-20240913T000907-bem-model-ico4.fif' does not end with '-bem-model.fif' in its name. Please make sure you know what you are doing.
+    3 BEM surfaces found
+    Reading a surface...
+[done]
+    Reading a surface...
+[done]
+    Reading a surface...
+[done]
+    3 BEM surfaces read
+I: type(gte.bem_model0) = <class 'list'>
+I: len(gte.bem_model0) = 3
+I: type(gte.bem_model0[0]) = <class 'dict'>
+I: len(gte.bem_model0[0]) = 8
+#+end_example
+:end:
+
+** Init: =gte.bem_solution0=
+#+begin_src python :async yes
+""" OPTIONS:
+gte.bem_solution0 = f"{gte.subject}-bem-solution-ico3.fif"
+gte.bem_solution0 = f"{gte.subject}-bem-solution-ico4.fif"
+gte.bem_solution0 = f"{gte.subject}-bem-solution-ico5.h5"
+"""
+gte.bem_solution0 = f"{gte.subject}-bem-solution-ico4.fif"
+log0.info(f"{gte.bem_solution0 = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+W: The file '/home/jiko/mount/data/subjects/phantomica-20240913T000907/aux/mne/phantomica-20240913T000907-bem-solution-ico4.fif' does not end with '-bem-solution.fif' in its name. Please make sure you know what you are doing.
+Loading surfaces...
+
+Loading the solution matrix...
+Three-layer model surfaces loaded.
+Loaded linear collocation BEM solution from /home/jiko/mount/data/subjects/phantomica-20240913T000907/aux/mne/phantomica-20240913T000907-bem-solution-ico4.fif
+I: gte.bem_solution0 = <ConductorModel | BEM (3 layers) solver=mne>
+#+end_example
+:end:
+
+** Init: =gte.fwd0=
+#+begin_src python :async yes
+""" OPTIONS:
+gte.fwd0 = f"{gte.subject}-fwd-src-ico5-bem-solution-ico3.fif"
+gte.fwd0 = f"{gte.subject}-fwd-src-ico5-bem-solution-ico4.fif"
+gte.fwd0 = f"{gte.subject}-fwd-src-ico5-bem-solution-ico5.fif"
+gte.fwd0 = f"{gte.subject}-fwd-src-oct6-bem-solution-ico3.fif"
+gte.fwd0 = f"{gte.subject}-fwd-src-oct6-bem-solution-ico4.fif"
+gte.fwd0 = f"{gte.subject}-fwd-src-oct6-bem-solution-ico5.fif"
+"""
+gte.fwd0 = f"{gte.subject}-fwd-src-oct6-bem-solution-ico4.fif"
+log0.info(f"{gte.fwd0 = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+W: The file '/home/jiko/mount/data/subjects/phantomica-20240913T000907/aux/mne/phantomica-20240913T000907-fwd-src-oct6-bem-solution-ico4.fif' does not end with '-fwd.fif' in its name. Please make sure you know what you are doing.
+Reading forward solution from /home/jiko/mount/data/subjects/phantomica-20240913T000907/aux/mne/phantomica-20240913T000907-fwd-src-oct6-bem-solution-ico4.fif...
+    Reading a source space...
+    Computing patch statistics...
+    Patch information added...
+    Distance information added...
+    [done]
+    Reading a source space...
+    Computing patch statistics...
+    Patch information added...
+/home/jiko/cc/dev/2024/20240906T200711-gte-python-package/gte/gte/gte.py:538: RuntimeWarning: This filename (/home/jiko/mount/data/subjects/phantomica-20240913T000907/aux/mne/phantomica-20240913T000907-fwd-src-oct6-bem-solution-ico4.fif) does not conform to MNE naming conventions. All forward files should end with -fwd.fif, -fwd.fif.gz, _fwd.fif, _fwd.fif.gz, -fwd.h5 or _fwd.h5
+  self._fwd0 = mne.read_forward_solution(fif_path)
+    Distance information added...
+    [done]
+    2 source spaces read
+    Desired named matrix (kind = 3523 (FIFF_MNE_FORWARD_SOLUTION_GRAD)) not available
+    Read EEG forward solution (8196 sources, 61 channels, free orientations)
+    Source spaces transformed to the forward solution coordinate frame
+I: gte.fwd0 = <Forward | MEG channels: 0 | EEG channels: 61 | Source space: Surface with 8196 vertices | Source orientation: Free>
+#+end_example
+:end:
+** Init: =gte.genuine_noise_cov0=
+#+begin_src python :async yes
+gte.genuine_noise_cov0 = f"{gte.subject}-real-noise-cov.fif"
+
+log0.info(f"{gte.genuine_noise_cov0 = }")
+gte.genuine_noise_cov0.plot(gte.info0)
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+    61 x 61 full covariance (kind = 1) found.
+I: Real noise covariance matrix loaded from /home/jiko/mount/data/subjects/phantomica-20240913T000907/aux/mne/phantomica-20240913T000907-real-noise-cov.fif
+I: gte.genuine_noise_cov0 = <Covariance | kind : full, shape : (61, 61), range : [-3.1e-10, +6.7e-10], n_samples : 599999>
+Computing rank from covariance with rank=None
+    Using tolerance 1.2e-12 (2.2e-16 eps * 61 dim * 89  max singular value)
+    Estimated rank (eeg): 61
+    EEG: rank 61 computed from 61 data channels with 0 projectors
+#+end_example
+| <Figure | size | 380x370 | with | 2 | Axes> | <Figure | size | 380x370 | with | 1 | Axes> |
+:end:
+
+** Init: =gte.annot0=
+#+begin_src python :async yes
+""" OPTIONS:
+gte.annot0 = "aparc"
+gte.annot0 = "HCPMMP1"
+gte.annot0 = "aparc_sub"
+gte.annot0 = "aparc.a2009s"
+gte.annot0 = "aparc_sub_fix"
+"""
+gte.annot0 = "aparc_sub_fix"
+log0.info(f"{gte.annot0 = }")
+#+end_src
+
+#+RESULTS:
+:results:
+: I: gte.annot0 = 'aparc_sub_fix'
+:end:
+** Init: =gte.labels0=
+#+begin_src python :async yes
+gte.read_labels_from_annot()
+log0.warning(f"{len(gte.labels0) = }")
+log0.warning(f"{gte.labels0 = }")
+log0.warning(f"{gte.label0_names = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+I: Successfully acquired 450 labels from annotation aparc_sub_fix
+W: len(gte.labels0) = 450
+W: gte.labels0 = [<Label | phantomica-20240913T000907, 'bankssts_1-lh', lh : 352 vertices>, <Label | phantomica-20240913T000907, 'bankssts_2-lh', lh : 523 vertices>, <Label | phantomica-20240913T000907, 'bankssts_3-lh', lh : 444 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_1-lh', lh : 338 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_2-lh', lh : 668 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_1-lh', lh : 536 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_2-lh', lh : 625 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_3-lh', lh : 462 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_4-lh', lh : 471 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_5-lh', lh : 739 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_6-lh', lh : 424 vertices>, <Label | phantomica-20240913T000907, 'cuneus_1-lh', lh : 858 vertices>, <Label | phantomica-20240913T000907, 'cuneus_2-lh', lh : 637 vertices>, <Label | phantomica-20240913T000907, 'cuneus_3-lh', lh : 578 vertices>, <Label | phantomica-20240913T000907, 'entorhinal_1-lh', lh : 484 vertices>, <Label | phantomica-20240913T000907, 'frontalpole_1-lh', lh : 401 vertices>, <Label | phantomica-20240913T000907, 'fusiform_1-lh', lh : 535 vertices>, <Label | phantomica-20240913T000907, 'fusiform_2-lh', lh : 763 vertices>, <Label | phantomica-20240913T000907, 'fusiform_3-lh', lh : 592 vertices>, <Label | phantomica-20240913T000907, 'fusiform_4-lh', lh : 633 vertices>, <Label | phantomica-20240913T000907, 'fusiform_5-lh', lh : 577 vertices>, <Label | phantomica-20240913T000907, 'fusiform_6-lh', lh : 471 vertices>, <Label | phantomica-20240913T000907, 'fusiform_7-lh', lh : 931 vertices>, <Label | phantomica-20240913T000907, 'fusiform_8-lh', lh : 634 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_1-lh', lh : 455 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_10-lh', lh : 666 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_2-lh', lh : 383 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_3-lh', lh : 502 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_4-lh', lh : 569 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_5-lh', lh : 415 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_6-lh', lh : 453 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_7-lh', lh : 726 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_8-lh', lh : 423 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_9-lh', lh : 815 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_1-lh', lh : 685 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_2-lh', lh : 710 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_3-lh', lh : 668 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_4-lh', lh : 977 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_5-lh', lh : 829 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_6-lh', lh : 709 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_7-lh', lh : 513 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_8-lh', lh : 903 vertices>, <Label | phantomica-20240913T000907, 'insula_1-lh', lh : 540 vertices>, <Label | phantomica-20240913T000907, 'insula_2-lh', lh : 639 vertices>, <Label | phantomica-20240913T000907, 'insula_3-lh', lh : 430 vertices>, <Label | phantomica-20240913T000907, 'insula_4-lh', lh : 408 vertices>, <Label | phantomica-20240913T000907, 'insula_5-lh', lh : 368 vertices>, <Label | phantomica-20240913T000907, 'insula_6-lh', lh : 627 vertices>, <Label | phantomica-20240913T000907, 'insula_7-lh', lh : 336 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_1-lh', lh : 446 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_2-lh', lh : 717 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_3-lh', lh : 348 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_1-lh', lh : 1059 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_10-lh', lh : 707 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_11-lh', lh : 687 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_2-lh', lh : 633 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_3-lh', lh : 615 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_4-lh', lh : 510 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_5-lh', lh : 614 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_6-lh', lh : 509 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_7-lh', lh : 525 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_8-lh', lh : 334 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_9-lh', lh : 503 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_1-lh', lh : 501 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_2-lh', lh : 736 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_3-lh', lh : 366 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_4-lh', lh : 703 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_5-lh', lh : 455 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_6-lh', lh : 524 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_7-lh', lh : 827 vertices>, <Label | phantomica-20240913T000907, 'lingual_1-lh', lh : 876 vertices>, <Label | phantomica-20240913T000907, 'lingual_2-lh', lh : 592 vertices>, <Label | phantomica-20240913T000907, 'lingual_3-lh', lh : 509 vertices>, <Label | phantomica-20240913T000907, 'lingual_4-lh', lh : 765 vertices>, <Label | phantomica-20240913T000907, 'lingual_5-lh', lh : 768 vertices>, <Label | phantomica-20240913T000907, 'lingual_6-lh', lh : 378 vertices>, <Label | phantomica-20240913T000907, 'lingual_7-lh', lh : 387 vertices>, <Label | phantomica-20240913T000907, 'lingual_8-lh', lh : 762 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_1-lh', lh : 432 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_2-lh', lh : 478 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_3-lh', lh : 488 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_4-lh', lh : 432 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_5-lh', lh : 403 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_1-lh', lh : 413 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_2-lh', lh : 476 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_3-lh', lh : 834 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_4-lh', lh : 865 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_5-lh', lh : 640 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_6-lh', lh : 800 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_7-lh', lh : 877 vertices>, <Label | phantomica-20240913T000907, 'paracentral_1-lh', lh : 451 vertices>, <Label | phantomica-20240913T000907, 'paracentral_2-lh', lh : 336 vertices>, <Label | phantomica-20240913T000907, 'paracentral_3-lh', lh : 317 vertices>, <Label | phantomica-20240913T000907, 'paracentral_4-lh', lh : 344 vertices>, <Label | phantomica-20240913T000907, 'paracentral_5-lh', lh : 454 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_1-lh', lh : 320 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_2-lh', lh : 279 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_3-lh', lh : 340 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_1-lh', lh : 497 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_2-lh', lh : 415 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_3-lh', lh : 698 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_4-lh', lh : 702 vertices>, <Label | phantomica-20240913T000907, 'parsorbitalis_1-lh', lh : 542 vertices>, <Label | phantomica-20240913T000907, 'parsorbitalis_2-lh', lh : 527 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_1-lh', lh : 744 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_2-lh', lh : 709 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_3-lh', lh : 461 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_1-lh', lh : 463 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_2-lh', lh : 516 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_3-lh', lh : 850 vertices>, <Label | phantomica-20240913T000907, 'postcentral_1-lh', lh : 442 vertices>, <Label | phantomica-20240913T000907, 'postcentral_10-lh', lh : 489 vertices>, <Label | phantomica-20240913T000907, 'postcentral_11-lh', lh : 358 vertices>, <Label | phantomica-20240913T000907, 'postcentral_12-lh', lh : 406 vertices>, <Label | phantomica-20240913T000907, 'postcentral_13-lh', lh : 533 vertices>, <Label | phantomica-20240913T000907, 'postcentral_14-lh', lh : 629 vertices>, <Label | phantomica-20240913T000907, 'postcentral_2-lh', lh : 331 vertices>, <Label | phantomica-20240913T000907, 'postcentral_3-lh', lh : 334 vertices>, <Label | phantomica-20240913T000907, 'postcentral_4-lh', lh : 513 vertices>, <Label | phantomica-20240913T000907, 'postcentral_5-lh', lh : 557 vertices>, <Label | phantomica-20240913T000907, 'postcentral_6-lh', lh : 629 vertices>, <Label | phantomica-20240913T000907, 'postcentral_7-lh', lh : 484 vertices>, <Label | phantomica-20240913T000907, 'postcentral_8-lh', lh : 481 vertices>, <Label | phantomica-20240913T000907, 'postcentral_9-lh', lh : 414 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_1-lh', lh : 348 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_2-lh', lh : 497 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_3-lh', lh : 381 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_4-lh', lh : 487 vertices>, <Label | phantomica-20240913T000907, 'precentral_1-lh', lh : 309 vertices>, <Label | phantomica-20240913T000907, 'precentral_10-lh', lh : 497 vertices>, <Label | phantomica-20240913T000907, 'precentral_11-lh', lh : 649 vertices>, <Label | phantomica-20240913T000907, 'precentral_12-lh', lh : 380 vertices>, <Label | phantomica-20240913T000907, 'precentral_13-lh', lh : 450 vertices>, <Label | phantomica-20240913T000907, 'precentral_14-lh', lh : 413 vertices>, <Label | phantomica-20240913T000907, 'precentral_15-lh', lh : 465 vertices>, <Label | phantomica-20240913T000907, 'precentral_16-lh', lh : 673 vertices>, <Label | phantomica-20240913T000907, 'precentral_2-lh', lh : 327 vertices>, <Label | phantomica-20240913T000907, 'precentral_3-lh', lh : 463 vertices>, <Label | phantomica-20240913T000907, 'precentral_4-lh', lh : 459 vertices>, <Label | phantomica-20240913T000907, 'precentral_5-lh', lh : 401 vertices>, <Label | phantomica-20240913T000907, 'precentral_6-lh', lh : 362 vertices>, <Label | phantomica-20240913T000907, 'precentral_7-lh', lh : 396 vertices>, <Label | phantomica-20240913T000907, 'precentral_8-lh', lh : 606 vertices>, <Label | phantomica-20240913T000907, 'precentral_9-lh', lh : 328 vertices>, <Label | phantomica-20240913T000907, 'precuneus_1-lh', lh : 312 vertices>, <Label | phantomica-20240913T000907, 'precuneus_10-lh', lh : 478 vertices>, <Label | phantomica-20240913T000907, 'precuneus_11-lh', lh : 517 vertices>, <Label | phantomica-20240913T000907, 'precuneus_2-lh', lh : 387 vertices>, <Label | phantomica-20240913T000907, 'precuneus_3-lh', lh : 619 vertices>, <Label | phantomica-20240913T000907, 'precuneus_4-lh', lh : 550 vertices>, <Label | phantomica-20240913T000907, 'precuneus_5-lh', lh : 589 vertices>, <Label | phantomica-20240913T000907, 'precuneus_6-lh', lh : 994 vertices>, <Label | phantomica-20240913T000907, 'precuneus_7-lh', lh : 725 vertices>, <Label | phantomica-20240913T000907, 'precuneus_8-lh', lh : 548 vertices>, <Label | phantomica-20240913T000907, 'precuneus_9-lh', lh : 442 vertices>, <Label | phantomica-20240913T000907, 'rostralanteriorcingulate_1-lh', lh : 870 vertices>, <Label | phantomica-20240913T000907, 'rostralanteriorcingulate_2-lh', lh : 461 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_1-lh', lh : 474 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_10-lh', lh : 782 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_11-lh', lh : 582 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_12-lh', lh : 635 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_2-lh', lh : 657 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_3-lh', lh : 893 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_4-lh', lh : 990 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_5-lh', lh : 691 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_6-lh', lh : 608 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_7-lh', lh : 706 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_8-lh', lh : 697 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_9-lh', lh : 1151 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_1-lh', lh : 706 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_10-lh', lh : 611 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_11-lh', lh : 694 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_12-lh', lh : 828 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_13-lh', lh : 423 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_14-lh', lh : 833 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_15-lh', lh : 517 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_16-lh', lh : 880 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_17-lh', lh : 411 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_18-lh', lh : 455 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_2-lh', lh : 568 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_3-lh', lh : 662 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_4-lh', lh : 804 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_5-lh', lh : 765 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_6-lh', lh : 738 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_7-lh', lh : 528 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_8-lh', lh : 543 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_9-lh', lh : 682 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_1-lh', lh : 625 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_10-lh', lh : 539 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_11-lh', lh : 519 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_12-lh', lh : 425 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_13-lh', lh : 417 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_14-lh', lh : 593 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_2-lh', lh : 586 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_3-lh', lh : 748 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_4-lh', lh : 660 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_5-lh', lh : 618 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_6-lh', lh : 673 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_7-lh', lh : 747 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_8-lh', lh : 475 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_9-lh', lh : 460 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_1-lh', lh : 401 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_10-lh', lh : 1015 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_11-lh', lh : 746 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_2-lh', lh : 381 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_3-lh', lh : 471 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_4-lh', lh : 518 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_5-lh', lh : 736 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_6-lh', lh : 629 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_7-lh', lh : 747 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_8-lh', lh : 781 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_9-lh', lh : 483 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_1-lh', lh : 501 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_10-lh', lh : 825 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_2-lh', lh : 552 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_3-lh', lh : 766 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_4-lh', lh : 774 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_5-lh', lh : 763 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_6-lh', lh : 519 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_7-lh', lh : 1024 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_8-lh', lh : 877 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_9-lh', lh : 768 vertices>, <Label | phantomica-20240913T000907, 'temporalpole_1-lh', lh : 715 vertices>, <Label | phantomica-20240913T000907, 'transversetemporal_1-lh', lh : 458 vertices>, <Label | phantomica-20240913T000907, 'transversetemporal_2-lh', lh : 370 vertices>, <Label | phantomica-20240913T000907, 'unknown-lh', lh : 7859 vertices>, <Label | phantomica-20240913T000907, 'bankssts_1-rh', rh : 442 vertices>, <Label | phantomica-20240913T000907, 'bankssts_2-rh', rh : 536 vertices>, <Label | phantomica-20240913T000907, 'bankssts_3-rh', rh : 509 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_1-rh', rh : 496 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_2-rh', rh : 520 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_3-rh', rh : 470 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_1-rh', rh : 478 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_2-rh', rh : 478 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_3-rh', rh : 412 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_4-rh', rh : 735 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_5-rh', rh : 645 vertices>, <Label | phantomica-20240913T000907, 'cuneus_1-rh', rh : 402 vertices>, <Label | phantomica-20240913T000907, 'cuneus_2-rh', rh : 464 vertices>, <Label | phantomica-20240913T000907, 'cuneus_3-rh', rh : 597 vertices>, <Label | phantomica-20240913T000907, 'cuneus_4-rh', rh : 746 vertices>, <Label | phantomica-20240913T000907, 'entorhinal_1-rh', rh : 387 vertices>, <Label | phantomica-20240913T000907, 'frontalpole_1-rh', rh : 437 vertices>, <Label | phantomica-20240913T000907, 'fusiform_1-rh', rh : 741 vertices>, <Label | phantomica-20240913T000907, 'fusiform_2-rh', rh : 455 vertices>, <Label | phantomica-20240913T000907, 'fusiform_3-rh', rh : 746 vertices>, <Label | phantomica-20240913T000907, 'fusiform_4-rh', rh : 525 vertices>, <Label | phantomica-20240913T000907, 'fusiform_5-rh', rh : 494 vertices>, <Label | phantomica-20240913T000907, 'fusiform_6-rh', rh : 763 vertices>, <Label | phantomica-20240913T000907, 'fusiform_7-rh', rh : 685 vertices>, <Label | phantomica-20240913T000907, 'fusiform_8-rh', rh : 727 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_1-rh', rh : 617 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_10-rh', rh : 752 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_11-rh', rh : 711 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_12-rh', rh : 1042 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_2-rh', rh : 673 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_3-rh', rh : 655 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_4-rh', rh : 1039 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_5-rh', rh : 526 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_6-rh', rh : 580 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_7-rh', rh : 642 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_8-rh', rh : 1002 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_9-rh', rh : 971 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_1-rh', rh : 590 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_2-rh', rh : 735 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_3-rh', rh : 522 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_4-rh', rh : 663 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_5-rh', rh : 1026 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_6-rh', rh : 796 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_7-rh', rh : 1093 vertices>, <Label | phantomica-20240913T000907, 'insula_1-rh', rh : 321 vertices>, <Label | phantomica-20240913T000907, 'insula_2-rh', rh : 507 vertices>, <Label | phantomica-20240913T000907, 'insula_3-rh', rh : 381 vertices>, <Label | phantomica-20240913T000907, 'insula_4-rh', rh : 457 vertices>, <Label | phantomica-20240913T000907, 'insula_5-rh', rh : 382 vertices>, <Label | phantomica-20240913T000907, 'insula_6-rh', rh : 751 vertices>, <Label | phantomica-20240913T000907, 'insula_7-rh', rh : 358 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_1-rh', rh : 675 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_2-rh', rh : 497 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_1-rh', rh : 892 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_10-rh', rh : 949 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_2-rh', rh : 564 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_3-rh', rh : 793 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_4-rh', rh : 692 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_5-rh', rh : 564 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_6-rh', rh : 458 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_7-rh', rh : 752 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_8-rh', rh : 863 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_9-rh', rh : 765 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_1-rh', rh : 379 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_2-rh', rh : 592 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_3-rh', rh : 565 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_4-rh', rh : 711 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_5-rh', rh : 452 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_6-rh', rh : 798 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_7-rh', rh : 647 vertices>, <Label | phantomica-20240913T000907, 'lingual_1-rh', rh : 569 vertices>, <Label | phantomica-20240913T000907, 'lingual_2-rh', rh : 646 vertices>, <Label | phantomica-20240913T000907, 'lingual_3-rh', rh : 533 vertices>, <Label | phantomica-20240913T000907, 'lingual_4-rh', rh : 575 vertices>, <Label | phantomica-20240913T000907, 'lingual_5-rh', rh : 563 vertices>, <Label | phantomica-20240913T000907, 'lingual_6-rh', rh : 696 vertices>, <Label | phantomica-20240913T000907, 'lingual_7-rh', rh : 690 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_1-rh', rh : 545 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_2-rh', rh : 966 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_3-rh', rh : 492 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_4-rh', rh : 391 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_5-rh', rh : 364 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_1-rh', rh : 924 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_2-rh', rh : 772 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_3-rh', rh : 486 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_4-rh', rh : 358 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_5-rh', rh : 502 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_6-rh', rh : 558 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_7-rh', rh : 967 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_8-rh', rh : 589 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_9-rh', rh : 519 vertices>, <Label | phantomica-20240913T000907, 'paracentral_1-rh', rh : 357 vertices>, <Label | phantomica-20240913T000907, 'paracentral_2-rh', rh : 321 vertices>, <Label | phantomica-20240913T000907, 'paracentral_3-rh', rh : 425 vertices>, <Label | phantomica-20240913T000907, 'paracentral_4-rh', rh : 460 vertices>, <Label | phantomica-20240913T000907, 'paracentral_5-rh', rh : 365 vertices>, <Label | phantomica-20240913T000907, 'paracentral_6-rh', rh : 430 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_1-rh', rh : 319 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_2-rh', rh : 267 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_3-rh', rh : 312 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_1-rh', rh : 446 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_2-rh', rh : 368 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_3-rh', rh : 544 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_4-rh', rh : 379 vertices>, <Label | phantomica-20240913T000907, 'parsorbitalis_1-rh', rh : 759 vertices>, <Label | phantomica-20240913T000907, 'parsorbitalis_2-rh', rh : 570 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_1-rh', rh : 519 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_2-rh', rh : 554 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_3-rh', rh : 571 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_4-rh', rh : 457 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_1-rh', rh : 552 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_2-rh', rh : 510 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_3-rh', rh : 323 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_4-rh', rh : 421 vertices>, <Label | phantomica-20240913T000907, 'postcentral_1-rh', rh : 369 vertices>, <Label | phantomica-20240913T000907, 'postcentral_10-rh', rh : 481 vertices>, <Label | phantomica-20240913T000907, 'postcentral_11-rh', rh : 571 vertices>, <Label | phantomica-20240913T000907, 'postcentral_12-rh', rh : 560 vertices>, <Label | phantomica-20240913T000907, 'postcentral_2-rh', rh : 387 vertices>, <Label | phantomica-20240913T000907, 'postcentral_3-rh', rh : 319 vertices>, <Label | phantomica-20240913T000907, 'postcentral_4-rh', rh : 586 vertices>, <Label | phantomica-20240913T000907, 'postcentral_5-rh', rh : 249 vertices>, <Label | phantomica-20240913T000907, 'postcentral_6-rh', rh : 517 vertices>, <Label | phantomica-20240913T000907, 'postcentral_7-rh', rh : 575 vertices>, <Label | phantomica-20240913T000907, 'postcentral_8-rh', rh : 487 vertices>, <Label | phantomica-20240913T000907, 'postcentral_9-rh', rh : 586 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_1-rh', rh : 508 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_2-rh', rh : 535 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_3-rh', rh : 474 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_4-rh', rh : 470 vertices>, <Label | phantomica-20240913T000907, 'precentral_1-rh', rh : 311 vertices>, <Label | phantomica-20240913T000907, 'precentral_10-rh', rh : 613 vertices>, <Label | phantomica-20240913T000907, 'precentral_11-rh', rh : 396 vertices>, <Label | phantomica-20240913T000907, 'precentral_12-rh', rh : 642 vertices>, <Label | phantomica-20240913T000907, 'precentral_13-rh', rh : 691 vertices>, <Label | phantomica-20240913T000907, 'precentral_14-rh', rh : 469 vertices>, <Label | phantomica-20240913T000907, 'precentral_15-rh', rh : 370 vertices>, <Label | phantomica-20240913T000907, 'precentral_16-rh', rh : 419 vertices>, <Label | phantomica-20240913T000907, 'precentral_2-rh', rh : 311 vertices>, <Label | phantomica-20240913T000907, 'precentral_3-rh', rh : 192 vertices>, <Label | phantomica-20240913T000907, 'precentral_4-rh', rh : 526 vertices>, <Label | phantomica-20240913T000907, 'precentral_5-rh', rh : 381 vertices>, <Label | phantomica-20240913T000907, 'precentral_6-rh', rh : 508 vertices>, <Label | phantomica-20240913T000907, 'precentral_7-rh', rh : 441 vertices>, <Label | phantomica-20240913T000907, 'precentral_8-rh', rh : 361 vertices>, <Label | phantomica-20240913T000907, 'precentral_9-rh', rh : 420 vertices>, <Label | phantomica-20240913T000907, 'precuneus_1-rh', rh : 476 vertices>, <Label | phantomica-20240913T000907, 'precuneus_10-rh', rh : 742 vertices>, <Label | phantomica-20240913T000907, 'precuneus_2-rh', rh : 409 vertices>, <Label | phantomica-20240913T000907, 'precuneus_3-rh', rh : 363 vertices>, <Label | phantomica-20240913T000907, 'precuneus_4-rh', rh : 546 vertices>, <Label | phantomica-20240913T000907, 'precuneus_5-rh', rh : 607 vertices>, <Label | phantomica-20240913T000907, 'precuneus_6-rh', rh : 568 vertices>, <Label | phantomica-20240913T000907, 'precuneus_7-rh', rh : 611 vertices>, <Label | phantomica-20240913T000907, 'precuneus_8-rh', rh : 975 vertices>, <Label | phantomica-20240913T000907, 'precuneus_9-rh', rh : 684 vertices>, <Label | phantomica-20240913T000907, 'rostralanteriorcingulate_1-rh', rh : 612 vertices>, <Label | phantomica-20240913T000907, 'rostralanteriorcingulate_2-rh', rh : 576 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_1-rh', rh : 963 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_10-rh', rh : 721 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_11-rh', rh : 562 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_12-rh', rh : 664 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_13-rh', rh : 704 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_2-rh', rh : 662 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_3-rh', rh : 556 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_4-rh', rh : 665 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_5-rh', rh : 608 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_6-rh', rh : 555 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_7-rh', rh : 687 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_8-rh', rh : 806 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_9-rh', rh : 596 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_1-rh', rh : 863 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_10-rh', rh : 554 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_11-rh', rh : 758 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_12-rh', rh : 538 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_13-rh', rh : 724 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_14-rh', rh : 426 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_15-rh', rh : 499 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_16-rh', rh : 529 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_17-rh', rh : 868 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_2-rh', rh : 571 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_3-rh', rh : 419 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_4-rh', rh : 604 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_5-rh', rh : 533 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_6-rh', rh : 703 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_7-rh', rh : 579 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_8-rh', rh : 1018 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_9-rh', rh : 889 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_1-rh', rh : 833 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_10-rh', rh : 396 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_11-rh', rh : 1046 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_12-rh', rh : 477 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_13-rh', rh : 687 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_2-rh', rh : 485 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_3-rh', rh : 455 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_4-rh', rh : 559 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_5-rh', rh : 605 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_6-rh', rh : 375 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_7-rh', rh : 545 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_8-rh', rh : 476 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_9-rh', rh : 660 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_1-rh', rh : 349 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_10-rh', rh : 392 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_11-rh', rh : 621 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_2-rh', rh : 579 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_3-rh', rh : 481 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_4-rh', rh : 563 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_5-rh', rh : 456 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_6-rh', rh : 839 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_7-rh', rh : 700 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_8-rh', rh : 896 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_9-rh', rh : 427 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_1-rh', rh : 489 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_2-rh', rh : 555 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_3-rh', rh : 757 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_4-rh', rh : 710 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_5-rh', rh : 680 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_6-rh', rh : 474 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_7-rh', rh : 516 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_8-rh', rh : 609 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_9-rh', rh : 464 vertices>, <Label | phantomica-20240913T000907, 'temporalpole_1-rh', rh : 614 vertices>, <Label | phantomica-20240913T000907, 'transversetemporal_1-rh', rh : 485 vertices>, <Label | phantomica-20240913T000907, 'unknown-rh', rh : 7775 vertices>]
+W: gte.label0_names = ['bankssts_1-lh', 'bankssts_2-lh', 'bankssts_3-lh', 'caudalanteriorcingulate_1-lh', 'caudalanteriorcingulate_2-lh', 'caudalmiddlefrontal_1-lh', 'caudalmiddlefrontal_2-lh', 'caudalmiddlefrontal_3-lh', 'caudalmiddlefrontal_4-lh', 'caudalmiddlefrontal_5-lh', 'caudalmiddlefrontal_6-lh', 'cuneus_1-lh', 'cuneus_2-lh', 'cuneus_3-lh', 'entorhinal_1-lh', 'frontalpole_1-lh', 'fusiform_1-lh', 'fusiform_2-lh', 'fusiform_3-lh', 'fusiform_4-lh', 'fusiform_5-lh', 'fusiform_6-lh', 'fusiform_7-lh', 'fusiform_8-lh', 'inferiorparietal_1-lh', 'inferiorparietal_10-lh', 'inferiorparietal_2-lh', 'inferiorparietal_3-lh', 'inferiorparietal_4-lh', 'inferiorparietal_5-lh', 'inferiorparietal_6-lh', 'inferiorparietal_7-lh', 'inferiorparietal_8-lh', 'inferiorparietal_9-lh', 'inferiortemporal_1-lh', 'inferiortemporal_2-lh', 'inferiortemporal_3-lh', 'inferiortemporal_4-lh', 'inferiortemporal_5-lh', 'inferiortemporal_6-lh', 'inferiortemporal_7-lh', 'inferiortemporal_8-lh', 'insula_1-lh', 'insula_2-lh', 'insula_3-lh', 'insula_4-lh', 'insula_5-lh', 'insula_6-lh', 'insula_7-lh', 'isthmuscingulate_1-lh', 'isthmuscingulate_2-lh', 'isthmuscingulate_3-lh', 'lateraloccipital_1-lh', 'lateraloccipital_10-lh', 'lateraloccipital_11-lh', 'lateraloccipital_2-lh', 'lateraloccipital_3-lh', 'lateraloccipital_4-lh', 'lateraloccipital_5-lh', 'lateraloccipital_6-lh', 'lateraloccipital_7-lh', 'lateraloccipital_8-lh', 'lateraloccipital_9-lh', 'lateralorbitofrontal_1-lh', 'lateralorbitofrontal_2-lh', 'lateralorbitofrontal_3-lh', 'lateralorbitofrontal_4-lh', 'lateralorbitofrontal_5-lh', 'lateralorbitofrontal_6-lh', 'lateralorbitofrontal_7-lh', 'lingual_1-lh', 'lingual_2-lh', 'lingual_3-lh', 'lingual_4-lh', 'lingual_5-lh', 'lingual_6-lh', 'lingual_7-lh', 'lingual_8-lh', 'medialorbitofrontal_1-lh', 'medialorbitofrontal_2-lh', 'medialorbitofrontal_3-lh', 'medialorbitofrontal_4-lh', 'medialorbitofrontal_5-lh', 'middletemporal_1-lh', 'middletemporal_2-lh', 'middletemporal_3-lh', 'middletemporal_4-lh', 'middletemporal_5-lh', 'middletemporal_6-lh', 'middletemporal_7-lh', 'paracentral_1-lh', 'paracentral_2-lh', 'paracentral_3-lh', 'paracentral_4-lh', 'paracentral_5-lh', 'parahippocampal_1-lh', 'parahippocampal_2-lh', 'parahippocampal_3-lh', 'parsopercularis_1-lh', 'parsopercularis_2-lh', 'parsopercularis_3-lh', 'parsopercularis_4-lh', 'parsorbitalis_1-lh', 'parsorbitalis_2-lh', 'parstriangularis_1-lh', 'parstriangularis_2-lh', 'parstriangularis_3-lh', 'pericalcarine_1-lh', 'pericalcarine_2-lh', 'pericalcarine_3-lh', 'postcentral_1-lh', 'postcentral_10-lh', 'postcentral_11-lh', 'postcentral_12-lh', 'postcentral_13-lh', 'postcentral_14-lh', 'postcentral_2-lh', 'postcentral_3-lh', 'postcentral_4-lh', 'postcentral_5-lh', 'postcentral_6-lh', 'postcentral_7-lh', 'postcentral_8-lh', 'postcentral_9-lh', 'posteriorcingulate_1-lh', 'posteriorcingulate_2-lh', 'posteriorcingulate_3-lh', 'posteriorcingulate_4-lh', 'precentral_1-lh', 'precentral_10-lh', 'precentral_11-lh', 'precentral_12-lh', 'precentral_13-lh', 'precentral_14-lh', 'precentral_15-lh', 'precentral_16-lh', 'precentral_2-lh', 'precentral_3-lh', 'precentral_4-lh', 'precentral_5-lh', 'precentral_6-lh', 'precentral_7-lh', 'precentral_8-lh', 'precentral_9-lh', 'precuneus_1-lh', 'precuneus_10-lh', 'precuneus_11-lh', 'precuneus_2-lh', 'precuneus_3-lh', 'precuneus_4-lh', 'precuneus_5-lh', 'precuneus_6-lh', 'precuneus_7-lh', 'precuneus_8-lh', 'precuneus_9-lh', 'rostralanteriorcingulate_1-lh', 'rostralanteriorcingulate_2-lh', 'rostralmiddlefrontal_1-lh', 'rostralmiddlefrontal_10-lh', 'rostralmiddlefrontal_11-lh', 'rostralmiddlefrontal_12-lh', 'rostralmiddlefrontal_2-lh', 'rostralmiddlefrontal_3-lh', 'rostralmiddlefrontal_4-lh', 'rostralmiddlefrontal_5-lh', 'rostralmiddlefrontal_6-lh', 'rostralmiddlefrontal_7-lh', 'rostralmiddlefrontal_8-lh', 'rostralmiddlefrontal_9-lh', 'superiorfrontal_1-lh', 'superiorfrontal_10-lh', 'superiorfrontal_11-lh', 'superiorfrontal_12-lh', 'superiorfrontal_13-lh', 'superiorfrontal_14-lh', 'superiorfrontal_15-lh', 'superiorfrontal_16-lh', 'superiorfrontal_17-lh', 'superiorfrontal_18-lh', 'superiorfrontal_2-lh', 'superiorfrontal_3-lh', 'superiorfrontal_4-lh', 'superiorfrontal_5-lh', 'superiorfrontal_6-lh', 'superiorfrontal_7-lh', 'superiorfrontal_8-lh', 'superiorfrontal_9-lh', 'superiorparietal_1-lh', 'superiorparietal_10-lh', 'superiorparietal_11-lh', 'superiorparietal_12-lh', 'superiorparietal_13-lh', 'superiorparietal_14-lh', 'superiorparietal_2-lh', 'superiorparietal_3-lh', 'superiorparietal_4-lh', 'superiorparietal_5-lh', 'superiorparietal_6-lh', 'superiorparietal_7-lh', 'superiorparietal_8-lh', 'superiorparietal_9-lh', 'superiortemporal_1-lh', 'superiortemporal_10-lh', 'superiortemporal_11-lh', 'superiortemporal_2-lh', 'superiortemporal_3-lh', 'superiortemporal_4-lh', 'superiortemporal_5-lh', 'superiortemporal_6-lh', 'superiortemporal_7-lh', 'superiortemporal_8-lh', 'superiortemporal_9-lh', 'supramarginal_1-lh', 'supramarginal_10-lh', 'supramarginal_2-lh', 'supramarginal_3-lh', 'supramarginal_4-lh', 'supramarginal_5-lh', 'supramarginal_6-lh', 'supramarginal_7-lh', 'supramarginal_8-lh', 'supramarginal_9-lh', 'temporalpole_1-lh', 'transversetemporal_1-lh', 'transversetemporal_2-lh', 'unknown-lh', 'bankssts_1-rh', 'bankssts_2-rh', 'bankssts_3-rh', 'caudalanteriorcingulate_1-rh', 'caudalanteriorcingulate_2-rh', 'caudalanteriorcingulate_3-rh', 'caudalmiddlefrontal_1-rh', 'caudalmiddlefrontal_2-rh', 'caudalmiddlefrontal_3-rh', 'caudalmiddlefrontal_4-rh', 'caudalmiddlefrontal_5-rh', 'cuneus_1-rh', 'cuneus_2-rh', 'cuneus_3-rh', 'cuneus_4-rh', 'entorhinal_1-rh', 'frontalpole_1-rh', 'fusiform_1-rh', 'fusiform_2-rh', 'fusiform_3-rh', 'fusiform_4-rh', 'fusiform_5-rh', 'fusiform_6-rh', 'fusiform_7-rh', 'fusiform_8-rh', 'inferiorparietal_1-rh', 'inferiorparietal_10-rh', 'inferiorparietal_11-rh', 'inferiorparietal_12-rh', 'inferiorparietal_2-rh', 'inferiorparietal_3-rh', 'inferiorparietal_4-rh', 'inferiorparietal_5-rh', 'inferiorparietal_6-rh', 'inferiorparietal_7-rh', 'inferiorparietal_8-rh', 'inferiorparietal_9-rh', 'inferiortemporal_1-rh', 'inferiortemporal_2-rh', 'inferiortemporal_3-rh', 'inferiortemporal_4-rh', 'inferiortemporal_5-rh', 'inferiortemporal_6-rh', 'inferiortemporal_7-rh', 'insula_1-rh', 'insula_2-rh', 'insula_3-rh', 'insula_4-rh', 'insula_5-rh', 'insula_6-rh', 'insula_7-rh', 'isthmuscingulate_1-rh', 'isthmuscingulate_2-rh', 'lateraloccipital_1-rh', 'lateraloccipital_10-rh', 'lateraloccipital_2-rh', 'lateraloccipital_3-rh', 'lateraloccipital_4-rh', 'lateraloccipital_5-rh', 'lateraloccipital_6-rh', 'lateraloccipital_7-rh', 'lateraloccipital_8-rh', 'lateraloccipital_9-rh', 'lateralorbitofrontal_1-rh', 'lateralorbitofrontal_2-rh', 'lateralorbitofrontal_3-rh', 'lateralorbitofrontal_4-rh', 'lateralorbitofrontal_5-rh', 'lateralorbitofrontal_6-rh', 'lateralorbitofrontal_7-rh', 'lingual_1-rh', 'lingual_2-rh', 'lingual_3-rh', 'lingual_4-rh', 'lingual_5-rh', 'lingual_6-rh', 'lingual_7-rh', 'medialorbitofrontal_1-rh', 'medialorbitofrontal_2-rh', 'medialorbitofrontal_3-rh', 'medialorbitofrontal_4-rh', 'medialorbitofrontal_5-rh', 'middletemporal_1-rh', 'middletemporal_2-rh', 'middletemporal_3-rh', 'middletemporal_4-rh', 'middletemporal_5-rh', 'middletemporal_6-rh', 'middletemporal_7-rh', 'middletemporal_8-rh', 'middletemporal_9-rh', 'paracentral_1-rh', 'paracentral_2-rh', 'paracentral_3-rh', 'paracentral_4-rh', 'paracentral_5-rh', 'paracentral_6-rh', 'parahippocampal_1-rh', 'parahippocampal_2-rh', 'parahippocampal_3-rh', 'parsopercularis_1-rh', 'parsopercularis_2-rh', 'parsopercularis_3-rh', 'parsopercularis_4-rh', 'parsorbitalis_1-rh', 'parsorbitalis_2-rh', 'parstriangularis_1-rh', 'parstriangularis_2-rh', 'parstriangularis_3-rh', 'parstriangularis_4-rh', 'pericalcarine_1-rh', 'pericalcarine_2-rh', 'pericalcarine_3-rh', 'pericalcarine_4-rh', 'postcentral_1-rh', 'postcentral_10-rh', 'postcentral_11-rh', 'postcentral_12-rh', 'postcentral_2-rh', 'postcentral_3-rh', 'postcentral_4-rh', 'postcentral_5-rh', 'postcentral_6-rh', 'postcentral_7-rh', 'postcentral_8-rh', 'postcentral_9-rh', 'posteriorcingulate_1-rh', 'posteriorcingulate_2-rh', 'posteriorcingulate_3-rh', 'posteriorcingulate_4-rh', 'precentral_1-rh', 'precentral_10-rh', 'precentral_11-rh', 'precentral_12-rh', 'precentral_13-rh', 'precentral_14-rh', 'precentral_15-rh', 'precentral_16-rh', 'precentral_2-rh', 'precentral_3-rh', 'precentral_4-rh', 'precentral_5-rh', 'precentral_6-rh', 'precentral_7-rh', 'precentral_8-rh', 'precentral_9-rh', 'precuneus_1-rh', 'precuneus_10-rh', 'precuneus_2-rh', 'precuneus_3-rh', 'precuneus_4-rh', 'precuneus_5-rh', 'precuneus_6-rh', 'precuneus_7-rh', 'precuneus_8-rh', 'precuneus_9-rh', 'rostralanteriorcingulate_1-rh', 'rostralanteriorcingulate_2-rh', 'rostralmiddlefrontal_1-rh', 'rostralmiddlefrontal_10-rh', 'rostralmiddlefrontal_11-rh', 'rostralmiddlefrontal_12-rh', 'rostralmiddlefrontal_13-rh', 'rostralmiddlefrontal_2-rh', 'rostralmiddlefrontal_3-rh', 'rostralmiddlefrontal_4-rh', 'rostralmiddlefrontal_5-rh', 'rostralmiddlefrontal_6-rh', 'rostralmiddlefrontal_7-rh', 'rostralmiddlefrontal_8-rh', 'rostralmiddlefrontal_9-rh', 'superiorfrontal_1-rh', 'superiorfrontal_10-rh', 'superiorfrontal_11-rh', 'superiorfrontal_12-rh', 'superiorfrontal_13-rh', 'superiorfrontal_14-rh', 'superiorfrontal_15-rh', 'superiorfrontal_16-rh', 'superiorfrontal_17-rh', 'superiorfrontal_2-rh', 'superiorfrontal_3-rh', 'superiorfrontal_4-rh', 'superiorfrontal_5-rh', 'superiorfrontal_6-rh', 'superiorfrontal_7-rh', 'superiorfrontal_8-rh', 'superiorfrontal_9-rh', 'superiorparietal_1-rh', 'superiorparietal_10-rh', 'superiorparietal_11-rh', 'superiorparietal_12-rh', 'superiorparietal_13-rh', 'superiorparietal_2-rh', 'superiorparietal_3-rh', 'superiorparietal_4-rh', 'superiorparietal_5-rh', 'superiorparietal_6-rh', 'superiorparietal_7-rh', 'superiorparietal_8-rh', 'superiorparietal_9-rh', 'superiortemporal_1-rh', 'superiortemporal_10-rh', 'superiortemporal_11-rh', 'superiortemporal_2-rh', 'superiortemporal_3-rh', 'superiortemporal_4-rh', 'superiortemporal_5-rh', 'superiortemporal_6-rh', 'superiortemporal_7-rh', 'superiortemporal_8-rh', 'superiortemporal_9-rh', 'supramarginal_1-rh', 'supramarginal_2-rh', 'supramarginal_3-rh', 'supramarginal_4-rh', 'supramarginal_5-rh', 'supramarginal_6-rh', 'supramarginal_7-rh', 'supramarginal_8-rh', 'supramarginal_9-rh', 'temporalpole_1-rh', 'transversetemporal_1-rh', 'unknown-rh']
+#+end_example
+:end:
+** Init: =gte.labels2=
+#+begin_src python :async yes
+verbose = True
+verbose = False
+gte.process_labels0(verbose=verbose)
+
+log0.warning(f"{gte.labels2 = }")
+log0.warning(f"{gte.label2_names = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+I: Successfully processed 450 labels with location 'center' and extent 0.0
+W: gte.labels2 = [<Label | phantomica-20240913T000907, 'bankssts_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'bankssts_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'bankssts_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'cuneus_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'cuneus_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'cuneus_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'entorhinal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'frontalpole_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_11-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsorbitalis_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsorbitalis_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_11-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_12-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_13-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_14-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_11-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_12-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_13-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_14-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_15-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_16-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_11-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralanteriorcingulate_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralanteriorcingulate_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_11-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_12-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_11-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_12-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_13-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_14-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_15-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_16-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_17-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_18-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_11-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_12-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_13-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_14-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_11-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_10-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_3-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_5-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_6-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_8-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_9-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'temporalpole_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'transversetemporal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'transversetemporal_2-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'unknown-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'bankssts_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'bankssts_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'bankssts_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalanteriorcingulate_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'caudalmiddlefrontal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'cuneus_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'cuneus_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'cuneus_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'cuneus_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'entorhinal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'frontalpole_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'fusiform_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_10-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_11-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_12-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiorparietal_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'inferiortemporal_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'insula_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'isthmuscingulate_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_10-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateralorbitofrontal_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'lingual_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'medialorbitofrontal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'middletemporal_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'paracentral_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parahippocampal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsopercularis_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsorbitalis_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parsorbitalis_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'parstriangularis_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'pericalcarine_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_10-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_11-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_12-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'postcentral_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'posteriorcingulate_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_10-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_11-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_12-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_13-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_14-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_15-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_16-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_10-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'precuneus_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralanteriorcingulate_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralanteriorcingulate_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_10-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_11-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_12-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_13-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_10-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_11-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_12-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_13-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_14-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_15-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_16-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_17-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_10-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_11-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_12-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_13-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_10-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_11-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_3-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_4-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_5-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_6-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_7-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_8-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'supramarginal_9-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'temporalpole_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'transversetemporal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'unknown-rh', rh : 1 vertices>]
+W: gte.label2_names = ['bankssts_1-lh', 'bankssts_2-lh', 'bankssts_3-lh', 'caudalanteriorcingulate_1-lh', 'caudalanteriorcingulate_2-lh', 'caudalmiddlefrontal_1-lh', 'caudalmiddlefrontal_2-lh', 'caudalmiddlefrontal_3-lh', 'caudalmiddlefrontal_4-lh', 'caudalmiddlefrontal_5-lh', 'caudalmiddlefrontal_6-lh', 'cuneus_1-lh', 'cuneus_2-lh', 'cuneus_3-lh', 'entorhinal_1-lh', 'frontalpole_1-lh', 'fusiform_1-lh', 'fusiform_2-lh', 'fusiform_3-lh', 'fusiform_4-lh', 'fusiform_5-lh', 'fusiform_6-lh', 'fusiform_7-lh', 'fusiform_8-lh', 'inferiorparietal_1-lh', 'inferiorparietal_10-lh', 'inferiorparietal_2-lh', 'inferiorparietal_3-lh', 'inferiorparietal_4-lh', 'inferiorparietal_5-lh', 'inferiorparietal_6-lh', 'inferiorparietal_7-lh', 'inferiorparietal_8-lh', 'inferiorparietal_9-lh', 'inferiortemporal_1-lh', 'inferiortemporal_2-lh', 'inferiortemporal_3-lh', 'inferiortemporal_4-lh', 'inferiortemporal_5-lh', 'inferiortemporal_6-lh', 'inferiortemporal_7-lh', 'inferiortemporal_8-lh', 'insula_1-lh', 'insula_2-lh', 'insula_3-lh', 'insula_4-lh', 'insula_5-lh', 'insula_6-lh', 'insula_7-lh', 'isthmuscingulate_1-lh', 'isthmuscingulate_2-lh', 'isthmuscingulate_3-lh', 'lateraloccipital_1-lh', 'lateraloccipital_10-lh', 'lateraloccipital_11-lh', 'lateraloccipital_2-lh', 'lateraloccipital_3-lh', 'lateraloccipital_4-lh', 'lateraloccipital_5-lh', 'lateraloccipital_6-lh', 'lateraloccipital_7-lh', 'lateraloccipital_8-lh', 'lateraloccipital_9-lh', 'lateralorbitofrontal_1-lh', 'lateralorbitofrontal_2-lh', 'lateralorbitofrontal_3-lh', 'lateralorbitofrontal_4-lh', 'lateralorbitofrontal_5-lh', 'lateralorbitofrontal_6-lh', 'lateralorbitofrontal_7-lh', 'lingual_1-lh', 'lingual_2-lh', 'lingual_3-lh', 'lingual_4-lh', 'lingual_5-lh', 'lingual_6-lh', 'lingual_7-lh', 'lingual_8-lh', 'medialorbitofrontal_1-lh', 'medialorbitofrontal_2-lh', 'medialorbitofrontal_3-lh', 'medialorbitofrontal_4-lh', 'medialorbitofrontal_5-lh', 'middletemporal_1-lh', 'middletemporal_2-lh', 'middletemporal_3-lh', 'middletemporal_4-lh', 'middletemporal_5-lh', 'middletemporal_6-lh', 'middletemporal_7-lh', 'paracentral_1-lh', 'paracentral_2-lh', 'paracentral_3-lh', 'paracentral_4-lh', 'paracentral_5-lh', 'parahippocampal_1-lh', 'parahippocampal_2-lh', 'parahippocampal_3-lh', 'parsopercularis_1-lh', 'parsopercularis_2-lh', 'parsopercularis_3-lh', 'parsopercularis_4-lh', 'parsorbitalis_1-lh', 'parsorbitalis_2-lh', 'parstriangularis_1-lh', 'parstriangularis_2-lh', 'parstriangularis_3-lh', 'pericalcarine_1-lh', 'pericalcarine_2-lh', 'pericalcarine_3-lh', 'postcentral_1-lh', 'postcentral_10-lh', 'postcentral_11-lh', 'postcentral_12-lh', 'postcentral_13-lh', 'postcentral_14-lh', 'postcentral_2-lh', 'postcentral_3-lh', 'postcentral_4-lh', 'postcentral_5-lh', 'postcentral_6-lh', 'postcentral_7-lh', 'postcentral_8-lh', 'postcentral_9-lh', 'posteriorcingulate_1-lh', 'posteriorcingulate_2-lh', 'posteriorcingulate_3-lh', 'posteriorcingulate_4-lh', 'precentral_1-lh', 'precentral_10-lh', 'precentral_11-lh', 'precentral_12-lh', 'precentral_13-lh', 'precentral_14-lh', 'precentral_15-lh', 'precentral_16-lh', 'precentral_2-lh', 'precentral_3-lh', 'precentral_4-lh', 'precentral_5-lh', 'precentral_6-lh', 'precentral_7-lh', 'precentral_8-lh', 'precentral_9-lh', 'precuneus_1-lh', 'precuneus_10-lh', 'precuneus_11-lh', 'precuneus_2-lh', 'precuneus_3-lh', 'precuneus_4-lh', 'precuneus_5-lh', 'precuneus_6-lh', 'precuneus_7-lh', 'precuneus_8-lh', 'precuneus_9-lh', 'rostralanteriorcingulate_1-lh', 'rostralanteriorcingulate_2-lh', 'rostralmiddlefrontal_1-lh', 'rostralmiddlefrontal_10-lh', 'rostralmiddlefrontal_11-lh', 'rostralmiddlefrontal_12-lh', 'rostralmiddlefrontal_2-lh', 'rostralmiddlefrontal_3-lh', 'rostralmiddlefrontal_4-lh', 'rostralmiddlefrontal_5-lh', 'rostralmiddlefrontal_6-lh', 'rostralmiddlefrontal_7-lh', 'rostralmiddlefrontal_8-lh', 'rostralmiddlefrontal_9-lh', 'superiorfrontal_1-lh', 'superiorfrontal_10-lh', 'superiorfrontal_11-lh', 'superiorfrontal_12-lh', 'superiorfrontal_13-lh', 'superiorfrontal_14-lh', 'superiorfrontal_15-lh', 'superiorfrontal_16-lh', 'superiorfrontal_17-lh', 'superiorfrontal_18-lh', 'superiorfrontal_2-lh', 'superiorfrontal_3-lh', 'superiorfrontal_4-lh', 'superiorfrontal_5-lh', 'superiorfrontal_6-lh', 'superiorfrontal_7-lh', 'superiorfrontal_8-lh', 'superiorfrontal_9-lh', 'superiorparietal_1-lh', 'superiorparietal_10-lh', 'superiorparietal_11-lh', 'superiorparietal_12-lh', 'superiorparietal_13-lh', 'superiorparietal_14-lh', 'superiorparietal_2-lh', 'superiorparietal_3-lh', 'superiorparietal_4-lh', 'superiorparietal_5-lh', 'superiorparietal_6-lh', 'superiorparietal_7-lh', 'superiorparietal_8-lh', 'superiorparietal_9-lh', 'superiortemporal_1-lh', 'superiortemporal_10-lh', 'superiortemporal_11-lh', 'superiortemporal_2-lh', 'superiortemporal_3-lh', 'superiortemporal_4-lh', 'superiortemporal_5-lh', 'superiortemporal_6-lh', 'superiortemporal_7-lh', 'superiortemporal_8-lh', 'superiortemporal_9-lh', 'supramarginal_1-lh', 'supramarginal_10-lh', 'supramarginal_2-lh', 'supramarginal_3-lh', 'supramarginal_4-lh', 'supramarginal_5-lh', 'supramarginal_6-lh', 'supramarginal_7-lh', 'supramarginal_8-lh', 'supramarginal_9-lh', 'temporalpole_1-lh', 'transversetemporal_1-lh', 'transversetemporal_2-lh', 'unknown-lh', 'bankssts_1-rh', 'bankssts_2-rh', 'bankssts_3-rh', 'caudalanteriorcingulate_1-rh', 'caudalanteriorcingulate_2-rh', 'caudalanteriorcingulate_3-rh', 'caudalmiddlefrontal_1-rh', 'caudalmiddlefrontal_2-rh', 'caudalmiddlefrontal_3-rh', 'caudalmiddlefrontal_4-rh', 'caudalmiddlefrontal_5-rh', 'cuneus_1-rh', 'cuneus_2-rh', 'cuneus_3-rh', 'cuneus_4-rh', 'entorhinal_1-rh', 'frontalpole_1-rh', 'fusiform_1-rh', 'fusiform_2-rh', 'fusiform_3-rh', 'fusiform_4-rh', 'fusiform_5-rh', 'fusiform_6-rh', 'fusiform_7-rh', 'fusiform_8-rh', 'inferiorparietal_1-rh', 'inferiorparietal_10-rh', 'inferiorparietal_11-rh', 'inferiorparietal_12-rh', 'inferiorparietal_2-rh', 'inferiorparietal_3-rh', 'inferiorparietal_4-rh', 'inferiorparietal_5-rh', 'inferiorparietal_6-rh', 'inferiorparietal_7-rh', 'inferiorparietal_8-rh', 'inferiorparietal_9-rh', 'inferiortemporal_1-rh', 'inferiortemporal_2-rh', 'inferiortemporal_3-rh', 'inferiortemporal_4-rh', 'inferiortemporal_5-rh', 'inferiortemporal_6-rh', 'inferiortemporal_7-rh', 'insula_1-rh', 'insula_2-rh', 'insula_3-rh', 'insula_4-rh', 'insula_5-rh', 'insula_6-rh', 'insula_7-rh', 'isthmuscingulate_1-rh', 'isthmuscingulate_2-rh', 'lateraloccipital_1-rh', 'lateraloccipital_10-rh', 'lateraloccipital_2-rh', 'lateraloccipital_3-rh', 'lateraloccipital_4-rh', 'lateraloccipital_5-rh', 'lateraloccipital_6-rh', 'lateraloccipital_7-rh', 'lateraloccipital_8-rh', 'lateraloccipital_9-rh', 'lateralorbitofrontal_1-rh', 'lateralorbitofrontal_2-rh', 'lateralorbitofrontal_3-rh', 'lateralorbitofrontal_4-rh', 'lateralorbitofrontal_5-rh', 'lateralorbitofrontal_6-rh', 'lateralorbitofrontal_7-rh', 'lingual_1-rh', 'lingual_2-rh', 'lingual_3-rh', 'lingual_4-rh', 'lingual_5-rh', 'lingual_6-rh', 'lingual_7-rh', 'medialorbitofrontal_1-rh', 'medialorbitofrontal_2-rh', 'medialorbitofrontal_3-rh', 'medialorbitofrontal_4-rh', 'medialorbitofrontal_5-rh', 'middletemporal_1-rh', 'middletemporal_2-rh', 'middletemporal_3-rh', 'middletemporal_4-rh', 'middletemporal_5-rh', 'middletemporal_6-rh', 'middletemporal_7-rh', 'middletemporal_8-rh', 'middletemporal_9-rh', 'paracentral_1-rh', 'paracentral_2-rh', 'paracentral_3-rh', 'paracentral_4-rh', 'paracentral_5-rh', 'paracentral_6-rh', 'parahippocampal_1-rh', 'parahippocampal_2-rh', 'parahippocampal_3-rh', 'parsopercularis_1-rh', 'parsopercularis_2-rh', 'parsopercularis_3-rh', 'parsopercularis_4-rh', 'parsorbitalis_1-rh', 'parsorbitalis_2-rh', 'parstriangularis_1-rh', 'parstriangularis_2-rh', 'parstriangularis_3-rh', 'parstriangularis_4-rh', 'pericalcarine_1-rh', 'pericalcarine_2-rh', 'pericalcarine_3-rh', 'pericalcarine_4-rh', 'postcentral_1-rh', 'postcentral_10-rh', 'postcentral_11-rh', 'postcentral_12-rh', 'postcentral_2-rh', 'postcentral_3-rh', 'postcentral_4-rh', 'postcentral_5-rh', 'postcentral_6-rh', 'postcentral_7-rh', 'postcentral_8-rh', 'postcentral_9-rh', 'posteriorcingulate_1-rh', 'posteriorcingulate_2-rh', 'posteriorcingulate_3-rh', 'posteriorcingulate_4-rh', 'precentral_1-rh', 'precentral_10-rh', 'precentral_11-rh', 'precentral_12-rh', 'precentral_13-rh', 'precentral_14-rh', 'precentral_15-rh', 'precentral_16-rh', 'precentral_2-rh', 'precentral_3-rh', 'precentral_4-rh', 'precentral_5-rh', 'precentral_6-rh', 'precentral_7-rh', 'precentral_8-rh', 'precentral_9-rh', 'precuneus_1-rh', 'precuneus_10-rh', 'precuneus_2-rh', 'precuneus_3-rh', 'precuneus_4-rh', 'precuneus_5-rh', 'precuneus_6-rh', 'precuneus_7-rh', 'precuneus_8-rh', 'precuneus_9-rh', 'rostralanteriorcingulate_1-rh', 'rostralanteriorcingulate_2-rh', 'rostralmiddlefrontal_1-rh', 'rostralmiddlefrontal_10-rh', 'rostralmiddlefrontal_11-rh', 'rostralmiddlefrontal_12-rh', 'rostralmiddlefrontal_13-rh', 'rostralmiddlefrontal_2-rh', 'rostralmiddlefrontal_3-rh', 'rostralmiddlefrontal_4-rh', 'rostralmiddlefrontal_5-rh', 'rostralmiddlefrontal_6-rh', 'rostralmiddlefrontal_7-rh', 'rostralmiddlefrontal_8-rh', 'rostralmiddlefrontal_9-rh', 'superiorfrontal_1-rh', 'superiorfrontal_10-rh', 'superiorfrontal_11-rh', 'superiorfrontal_12-rh', 'superiorfrontal_13-rh', 'superiorfrontal_14-rh', 'superiorfrontal_15-rh', 'superiorfrontal_16-rh', 'superiorfrontal_17-rh', 'superiorfrontal_2-rh', 'superiorfrontal_3-rh', 'superiorfrontal_4-rh', 'superiorfrontal_5-rh', 'superiorfrontal_6-rh', 'superiorfrontal_7-rh', 'superiorfrontal_8-rh', 'superiorfrontal_9-rh', 'superiorparietal_1-rh', 'superiorparietal_10-rh', 'superiorparietal_11-rh', 'superiorparietal_12-rh', 'superiorparietal_13-rh', 'superiorparietal_2-rh', 'superiorparietal_3-rh', 'superiorparietal_4-rh', 'superiorparietal_5-rh', 'superiorparietal_6-rh', 'superiorparietal_7-rh', 'superiorparietal_8-rh', 'superiorparietal_9-rh', 'superiortemporal_1-rh', 'superiortemporal_10-rh', 'superiortemporal_11-rh', 'superiortemporal_2-rh', 'superiortemporal_3-rh', 'superiortemporal_4-rh', 'superiortemporal_5-rh', 'superiortemporal_6-rh', 'superiortemporal_7-rh', 'superiortemporal_8-rh', 'superiortemporal_9-rh', 'supramarginal_1-rh', 'supramarginal_2-rh', 'supramarginal_3-rh', 'supramarginal_4-rh', 'supramarginal_5-rh', 'supramarginal_6-rh', 'supramarginal_7-rh', 'supramarginal_8-rh', 'supramarginal_9-rh', 'temporalpole_1-rh', 'transversetemporal_1-rh', 'unknown-rh']
+#+end_example
+:end:
+** Check WaveForm Generation
+#+begin_src python :async yes
+rng = np.random.RandomState(7)
+
+n_samp = 1000
+times = np.arange(n_samp, dtype=np.float64) / gte.info0["sfreq"]
+
+tmp_lat = 0.35
+tmp_lat = 0.45
+tmp_lat = 0.25
+
+tmp_amp = 2
+tmp_amp = 3
+tmp_amp = 1
+
+tmp_dur = 0.45
+tmp_dur = 0.35
+tmp_dur = 0.25
+
+tmp_wf = GTE().generate_waveform(times=times, latency=tmp_lat, duration=tmp_dur, amplitude=tmp_amp)
+log0.warning(f"{type(tmp_wf) = }")
+log0.warning(f"{tmp_wf.shape = }")
+log0.warning(f"{times.shape = }")
+log0.warning(f"{times[:20] = }")
+"""
+plt.close('all')
+"""
+plt.plot(times, tmp_wf)
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+W: type(tmp_wf) = <class 'numpy.ndarray'>
+W: tmp_wf.shape = (1000,)
+W: times.shape = (1000,)
+W: times[:20] = array([0.   , 0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.007, 0.008,
+       0.009, 0.01 , 0.011, 0.012, 0.013, 0.014, 0.015, 0.016, 0.017,
+       0.018, 0.019])
+#+end_example
+| <matplotlib.lines.Line2D | at | 0x7f5cb3662ae0> |
+:end:
+
+** Check Events Generation
+#+begin_src python :async yes
+event_labels = ["Ev01", "Ev02"]
+event_labels = 3
+
+temp_events, temp_event_IDs, temp_event_desc, temp_events_df = GTE().make_dummy_events(
+    event_labels=event_labels,
+    event_repets=100,
+    event_interv=2000,
+    event_begins=5000,
+)
+
+ddf(temp_events_df.head(n=4))
+ddf(temp_events_df.tail(n=4))
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+   sample_num  preceding_val  event_code event_labels
+0        5000              0           2         Ev02
+1        7000              0           3         Ev03
+2        9000              0           2         Ev02
+3       11000              0           2         Ev02
+#+end_example
+#+begin_example
+     sample_num  preceding_val  event_code event_labels
+296      597000              0           2         Ev02
+297      599000              0           3         Ev03
+298      601000              0           3         Ev03
+299      603000              0           1         Ev01
+#+end_example
+:end:
+
+** Init: Get Singularity Event(s)
+#+begin_src python :async yes
+gte.make_singularity_events()
+
+ddf(gte.singularity_events_df)
+#+end_src
+
+#+RESULTS:
+:results:
+: I: Singularity events generated and stored.
+#+begin_example
+   sample_num  preceding_val  event_code event_labels
+0        5000              0           1  singularity
+#+end_example
+:end:
+
+** Init: Get Experimental Events
+#+begin_src python :async yes
+event_labels = ["Ev01", "Ev02"]
+event_labels = 3
+gte.make_experimental_events(event_labels = event_labels)
+
+print(f"{gte.experimental_events_df.shape = }")
+ddf(gte.experimental_events_df.event_labels.value_counts().sort_index())
+ddf(gte.experimental_events_df.head(n=4))
+ddf(gte.experimental_events_df.tail(n=4))
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+I: Experimental events generated and stored.
+gte.experimental_events_df.shape = (300, 4)
+#+end_example
+#+begin_example
+event_labels
+Ev01    100
+Ev02    100
+Ev03    100
+Name: count, dtype: int64
+#+end_example
+#+begin_example
+   sample_num  preceding_val  event_code event_labels
+0        5000              0           2         Ev02
+1        7000              0           3         Ev03
+2        9000              0           3         Ev03
+3       11000              0           1         Ev01
+#+end_example
+#+begin_example
+     sample_num  preceding_val  event_code event_labels
+296      597000              0           3         Ev03
+297      599000              0           2         Ev02
+298      601000              0           3         Ev03
+299      603000              0           1         Ev01
+#+end_example
+:end:
+
+** Randomized Activations
+#+begin_src python :async yes
+gte.set_randomized_activations(
+    num_labels=9,
+    num_labels_per_event=2,
+    event_labels=2,
+)
+print(srsly.yaml_dumps(gte.activ0))
+print(srsly.yaml_dumps(gte.activ0_labels))
+print(srsly.yaml_dumps(gte.activ0_events))
+ddf(gte.activations_to_dataframe())
+print("\n=========== UPDATED EVENTS 4 ===========\n")
+print(f"{gte.experimental_events_df.shape = }")
+ddf(gte.experimental_events_df.event_labels.value_counts().sort_index())
+ddf(gte.experimental_events_df.head(n=4))
+ddf(gte.experimental_events_df.tail(n=4))
+print("\n=========== UPDATED LABELS 4 ===========\n")
+print(f"{len(gte.labels4) = }")
+print(f"{gte.labels4 = }")
+print(f"{gte.label4_names = }")
+
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+I: Experimental events generated and stored.
+I: Randomized activations set for 2 events with 9 total labels.
+Ev01:
+  precentral_7-lh:
+    lat: 0.22
+    dur: 0.4
+    amp: 478.95
+  rostralmiddlefrontal_9-rh:
+    lat: 0.3
+    dur: 0.33
+    amp: 246.59
+Ev02:
+  precentral_11-rh:
+    lat: 0.36
+    dur: 0.31
+    amp: 417.07
+  precentral_7-lh:
+    lat: 0.33
+    dur: 0.38
+    amp: 459.89
+
+  - precentral_11-rh
+  - precentral_7-lh
+  - rostralmiddlefrontal_9-rh
+
+  - Ev01
+  - Ev02
+#+end_example
+#+begin_example
+  Event                     Region  Latency  Duration  Amplitude
+0  Ev01            precentral_7-lh     0.22      0.40     478.95
+1  Ev01  rostralmiddlefrontal_9-rh     0.30      0.33     246.59
+2  Ev02           precentral_11-rh     0.36      0.31     417.07
+3  Ev02            precentral_7-lh     0.33      0.38     459.89
+=========== UPDATED EVENTS 4 ===========
+
+gte.experimental_events_df.shape = (200, 4)
+#+end_example
+#+begin_example
+event_labels
+Ev01    100
+Ev02    100
+Name: count, dtype: int64
+#+end_example
+#+begin_example
+   sample_num  preceding_val  event_code event_labels
+0        5000              0           2         Ev02
+1        7000              0           2         Ev02
+2        9000              0           2         Ev02
+3       11000              0           2         Ev02
+#+end_example
+#+begin_example
+     sample_num  preceding_val  event_code event_labels
+196      397000              0           1         Ev01
+197      399000              0           1         Ev01
+198      401000              0           1         Ev01
+199      403000              0           1         Ev01
+=========== UPDATED LABELS 4 ===========
+
+len(gte.labels4) = 3
+gte.labels4 = [<Label | phantomica-20240913T000907, 'precentral_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_11-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_9-rh', rh : 1 vertices>]
+gte.label4_names = ['precentral_11-rh', 'precentral_7-lh', 'rostralmiddlefrontal_9-rh']
+#+end_example
+:end:
+
+** Predefined Activations
+#+begin_src python :async yes
+gte.set_predefined_activations()
+print(srsly.yaml_dumps(gte.activ0))
+print(srsly.yaml_dumps(gte.activ0_labels))
+print(srsly.yaml_dumps(gte.activ0_events))
+ddf(gte.activations_to_dataframe())
+print("\n=========== UPDATED EVENTS ===========\n")
+print(f"{gte.experimental_events_df.shape = }")
+ddf(gte.experimental_events_df.event_labels.value_counts().sort_index())
+ddf(gte.experimental_events_df.head(n=4))
+ddf(gte.experimental_events_df.tail(n=4))
+print("\n=========== UPDATED LABELS 4 ===========\n")
+print(f"{len(gte.labels4) = }")
+print(f"{gte.labels4 = }")
+print(f"{gte.label4_names = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+I: Experimental events generated and stored.
+Ev01:
+  frontalpole_1-lh:
+    lat: 0.35
+    dur: 0.2
+    amp: 300
+  superiorfrontal_1-lh:
+    lat: 0.25
+    dur: 0.4
+    amp: 320
+  rostralmiddlefrontal_7-lh:
+    lat: 0.45
+    dur: 0.2
+    amp: 320
+  superiorparietal_3-rh:
+    lat: 0.25
+    dur: 0.6
+    amp: 320
+Ev02:
+  superiorfrontal_1-lh:
+    lat: 0.35
+    dur: 0.2
+    amp: 320
+  superiorparietal_1-rh:
+    lat: 0.45
+    dur: 0.2
+    amp: 440
+  superiortemporal_1-lh:
+    lat: 0.25
+    dur: 0.4
+    amp: 320
+  precentral_13-lh:
+    lat: 0.35
+    dur: 0.2
+    amp: 320
+  lateraloccipital_2-rh:
+    lat: 0.45
+    dur: 0.3
+    amp: 440
+  lateraloccipital_4-lh:
+    lat: 0.25
+    dur: 0.2
+    amp: 320
+
+  - frontalpole_1-lh
+  - lateraloccipital_2-rh
+  - lateraloccipital_4-lh
+  - precentral_13-lh
+  - rostralmiddlefrontal_7-lh
+  - superiorfrontal_1-lh
+  - superiorparietal_1-rh
+  - superiorparietal_3-rh
+  - superiortemporal_1-lh
+
+  - Ev01
+  - Ev02
+#+end_example
+#+begin_example
+  Event                     Region  Latency  Duration  Amplitude
+0  Ev01           frontalpole_1-lh     0.35       0.2        300
+1  Ev01       superiorfrontal_1-lh     0.25       0.4        320
+2  Ev01  rostralmiddlefrontal_7-lh     0.45       0.2        320
+3  Ev01      superiorparietal_3-rh     0.25       0.6        320
+4  Ev02       superiorfrontal_1-lh     0.35       0.2        320
+5  Ev02      superiorparietal_1-rh     0.45       0.2        440
+6  Ev02      superiortemporal_1-lh     0.25       0.4        320
+7  Ev02           precentral_13-lh     0.35       0.2        320
+8  Ev02      lateraloccipital_2-rh     0.45       0.3        440
+9  Ev02      lateraloccipital_4-lh     0.25       0.2        320
+=========== UPDATED EVENTS ===========
+
+gte.experimental_events_df.shape = (200, 4)
+#+end_example
+#+begin_example
+event_labels
+Ev01    100
+Ev02    100
+Name: count, dtype: int64
+#+end_example
+#+begin_example
+   sample_num  preceding_val  event_code event_labels
+0        5000              0           1         Ev01
+1        7000              0           2         Ev02
+2        9000              0           1         Ev01
+3       11000              0           2         Ev02
+#+end_example
+#+begin_example
+     sample_num  preceding_val  event_code event_labels
+196      397000              0           1         Ev01
+197      399000              0           2         Ev02
+198      401000              0           1         Ev01
+199      403000              0           1         Ev01
+=========== UPDATED LABELS 4 ===========
+
+len(gte.labels4) = 9
+gte.labels4 = [<Label | phantomica-20240913T000907, 'frontalpole_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_4-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'precentral_13-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_7-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorfrontal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiortemporal_1-lh', lh : 1 vertices>, <Label | phantomica-20240913T000907, 'lateraloccipital_2-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_1-rh', rh : 1 vertices>, <Label | phantomica-20240913T000907, 'superiorparietal_3-rh', rh : 1 vertices>]
+gte.label4_names = ['frontalpole_1-lh', 'lateraloccipital_2-rh', 'lateraloccipital_4-lh', 'precentral_13-lh', 'rostralmiddlefrontal_7-lh', 'superiorfrontal_1-lh', 'superiorparietal_1-rh', 'superiorparietal_3-rh', 'superiortemporal_1-lh']
+#+end_example
+:end:
+
+** Select Activity Labels
+#+begin_src python :async yes
+gte.labels2[0].name
+#+end_src
+
+#+RESULTS:
+:results:
+: bankssts_1-lh
+:end:
+
+** Number of Samples in Trial
+#+begin_src python :async yes
+print(f"{gte.activ0_trial_num_samp = }")
+#+end_src
+
+#+RESULTS:
+:results:
+: gte.activ0_trial_num_samp = 1000
+:end:
+
+** Times
+#+begin_src python :async yes
+print(f"{len(gte.times0) = }")
+print(f"{gte.times0[:5] = }")
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+len(gte.times0) = 1000
+gte.times0[:5] = array([0.   , 0.001, 0.002, 0.003, 0.004])
+#+end_example
+:end:
+** Initialize Source Simulator
+#+begin_src python :async yes
+gte.initialize_source_simulator()
+print(gte.source_simulator)
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+I: SourceSimulator initialized with tstep=0.001000s
+<mne.simulation.source.SourceSimulator object at 0x7f5cb3631af0>
+#+end_example
+:end:
+** Add data to Source Simulator
+#+begin_src python :async yes
+gte.add_data_to_source_simulator()
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+W: 0: Ev01 [1] (100, 3)
+W: - 0: frontalpole_1-lh --- {'lat': 0.35, 'dur': 0.2, 'amp': 300}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'frontalpole_1-lh', lh : 1 vertices>
+W:   - tmp_lat = 0.35, tmp_dur = 0.2, tmp_amp = 300
+W:   - data added source waveform to source simulator for frontalpole_1-lh
+W: - 1: superiorfrontal_1-lh --- {'lat': 0.25, 'dur': 0.4, 'amp': 320}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'superiorfrontal_1-lh', lh : 1 vertices>
+W:   - tmp_lat = 0.25, tmp_dur = 0.4, tmp_amp = 320
+W:   - data added source waveform to source simulator for superiorfrontal_1-lh
+W: - 2: rostralmiddlefrontal_7-lh --- {'lat': 0.45, 'dur': 0.2, 'amp': 320}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'rostralmiddlefrontal_7-lh', lh : 1 vertices>
+W:   - tmp_lat = 0.45, tmp_dur = 0.2, tmp_amp = 320
+W:   - data added source waveform to source simulator for rostralmiddlefrontal_7-lh
+W: - 3: superiorparietal_3-rh --- {'lat': 0.25, 'dur': 0.6, 'amp': 320}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'superiorparietal_3-rh', rh : 1 vertices>
+W:   - tmp_lat = 0.25, tmp_dur = 0.6, tmp_amp = 320
+W:   - data added source waveform to source simulator for superiorparietal_3-rh
+W: 1: Ev02 [2] (100, 3)
+W: - 0: superiorfrontal_1-lh --- {'lat': 0.35, 'dur': 0.2, 'amp': 320}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'superiorfrontal_1-lh', lh : 1 vertices>
+W:   - tmp_lat = 0.35, tmp_dur = 0.2, tmp_amp = 320
+W:   - data added source waveform to source simulator for superiorfrontal_1-lh
+W: - 1: superiorparietal_1-rh --- {'lat': 0.45, 'dur': 0.2, 'amp': 440}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'superiorparietal_1-rh', rh : 1 vertices>
+W:   - tmp_lat = 0.45, tmp_dur = 0.2, tmp_amp = 440
+W:   - data added source waveform to source simulator for superiorparietal_1-rh
+W: - 2: superiortemporal_1-lh --- {'lat': 0.25, 'dur': 0.4, 'amp': 320}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'superiortemporal_1-lh', lh : 1 vertices>
+W:   - tmp_lat = 0.25, tmp_dur = 0.4, tmp_amp = 320
+W:   - data added source waveform to source simulator for superiortemporal_1-lh
+W: - 3: precentral_13-lh --- {'lat': 0.35, 'dur': 0.2, 'amp': 320}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'precentral_13-lh', lh : 1 vertices>
+W:   - tmp_lat = 0.35, tmp_dur = 0.2, tmp_amp = 320
+W:   - data added source waveform to source simulator for precentral_13-lh
+W: - 4: lateraloccipital_2-rh --- {'lat': 0.45, 'dur': 0.3, 'amp': 440}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'lateraloccipital_2-rh', rh : 1 vertices>
+W:   - tmp_lat = 0.45, tmp_dur = 0.3, tmp_amp = 440
+W:   - data added source waveform to source simulator for lateraloccipital_2-rh
+W: - 5: lateraloccipital_4-lh --- {'lat': 0.25, 'dur': 0.2, 'amp': 320}
+W:   - tmp_label = <Label | phantomica-20240913T000907, 'lateraloccipital_4-lh', lh : 1 vertices>
+W:   - tmp_lat = 0.25, tmp_dur = 0.2, tmp_amp = 320
+W:   - data added source waveform to source simulator for lateraloccipital_4-lh
+#+end_example
+:end:
+** Get Source Time Course
+#+begin_src python :async yes
+gte.extract_activ0_stc()
+gte.activ0_stc
+#+end_src
+
+#+RESULTS:
+:results:
+: <SourceEstimate | 9 vertices, subject : phantomica-20240913T000907, tmin : 0.0 (ms), tmax : 403999.0 (ms), tstep : 1.0 (ms), data shape : (9, 404000), ~27.7 MB>
+:end:
+** Check Source Time Course
+#+begin_src python :async yes
+gte.activ0_stc
+#+end_src
+
+#+RESULTS:
+:results:
+: <SourceEstimate | 9 vertices, subject : phantomica-20240913T000907, tmin : 0.0 (ms), tmax : 403999.0 (ms), tstep : 1.0 (ms), data shape : (9, 404000), ~27.7 MB>
+:end:
+** Generate Raw Data
+#+begin_src python :async yes
+gte.extract_activ0_raw()
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+Setting up raw simulation: 1 position, "cos2" interpolation
+Event information not stored
+    Interval 0.000–1.000 s
+Setting up forward solutions
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    Interval 0.000–1.000 s
+    404 STC iterations provided
+[done]
+EEG channel type selected for re-referencing
+Adding average EEG reference projection.
+1 projection items deactivated
+Average reference projection was added, but has not been applied yet. Use the apply_proj method to apply it.
+#+end_example
+:end:
+
+** Plot Raw
+#+begin_src python :async yes
+gte.activ0_raw.plot(duration=10.0, start=0.0)
+#+end_src
+
+#+RESULTS:
+:results:
+: Using qt as 2D backend.
+: <mne_qt_browser._pg_figure.MNEQtBrowser(0x5625b54714c0) at 0x7f5cb3178bc0>
+:end:
+
+** Add Noise to Raw
+#+begin_src python :async yes
+gte.extract_activ2_raw()  # TODO add noise parameters
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+Adding noise to 61/61 channels (61 channels in cov)
+Sphere                : origin at (0.0 0.0 0.0) mm
+              radius  : 0.1 mm
+Source location file  : dict()
+Assuming input in millimeters
+Assuming input in MRI coordinates
+
+Positions (in meters) and orientations
+2 sources
+blink simulated and trace not stored
+Setting up forward solutions
+#+end_example
+:end:
+
+** Plot Noisy Raw
+#+begin_src python :async yes
+gte.activ2_raw.plot(duration=10.0, start=0.0)
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+<mne_qt_browser._pg_figure.MNEQtBrowser(0x5625b7073880) at 0x7f5cb2a77080>Channels marked as bad:
+none
+/home/jiko/anaconda3/envs/mne0/lib/python3.12/site-packages/mne_qt_browser/_pg_figure.py:3061: RuntimeWarning: Failed to disconnect (None) from signal "triggered()".
+  sig.disconnect()
+#+end_example
+:end:
+** Add Evoked and Epoched Data
+#+begin_src python :async yes
+gte.extract_activ2_epochs_and_evoked()
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+Not setting metadata
+200 matching events found
+Setting baseline interval to [-0.4, 0.0] s
+Applying baseline correction (mode: mean)
+Created an SSP operator (subspace dimension = 1)
+1 projection items activated
+#+end_example
+:end:
+
+** Plot Epochs
+#+begin_src python :async yes
+print(gte.activ2_epochs.event_id.keys())
+gte.activ2_epochs.plot()
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+Using data from preloaded Raw for 20 events and 1601 original time points ...
+Using data from preloaded Raw for 19 events and 1601 original time points ...
+Using data from preloaded Raw for 20 events and 1601 original time points ...
+Using data from preloaded Raw for 19 events and 1601 original time points ...
+Using data from preloaded Raw for 20 events and 1601 original time points ...
+Using data from preloaded Raw for 19 events and 1601 original time points ...
+Using data from preloaded Raw for 19 events and 1601 original time points ...
+{'Ev01': 1, 'Ev02': 2}
+Using data from preloaded Raw for 19 events and 1601 original time points ...
+Using data from preloaded Raw for 19 events and 1601 original time points ...
+Using data from preloaded Raw for 19 events and 1601 original time points ...
+Using data from preloaded Raw for 19 events and 1601 original time points ...
+Using data from preloaded Raw for 19 events and 1601 original time points ...
+Using data from preloaded Raw for 28 events and 1601 original time points ...
+Dropped 0 epochs:
+The following epochs were marked as bad and are dropped:
+[]
+Channels marked as bad:
+none
+/home/jiko/anaconda3/envs/mne0/lib/python3.12/site-packages/mne_qt_browser/_pg_figure.py:3061: RuntimeWarning: Failed to disconnect (None) from signal "triggered()".
+  sig.disconnect()
+#+end_example
+:end:
+
+** Plot evoked
+#+begin_src python :async yes
+ev = list(gte.activ2_epochs.event_id.keys())[0]
+gte.activ2_evoked[ev].plot(spatial_colors=True)
+gte.activ2_evoked[ev].plot_image()
+#+end_src
+
+#+RESULTS:
+:results:
+: <Figure size 640x300 with 2 Axes>
+:end:
+** Compute Covariances
+#+begin_src python :async yes
+gte.compute_covariances(
+    data_tmin = 0.01,
+    data_tmax = 0.60,
+    noise_tmin = None,
+    noise_tmax = 0,
+    method = "empirical")
+
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+Using data from preloaded Raw for 99 events and 1601 original time points ...
+Using data from preloaded Raw for 100 events and 1601 original time points ...
+    Created an SSP operator (subspace dimension = 1)
+    Setting small EEG eigenvalues to zero (without PCA)
+Reducing data rank from 61 -> 60
+Estimating covariance using EMPIRICAL
+Done.
+Number of samples used : 117609
+[done]
+Using data from preloaded Raw for 99 events and 1601 original time points ...
+Using data from preloaded Raw for 100 events and 1601 original time points ...
+    Created an SSP operator (subspace dimension = 1)
+    Setting small EEG eigenvalues to zero (without PCA)
+Reducing data rank from 61 -> 60
+Estimating covariance using EMPIRICAL
+Done.
+Number of samples used : 79799
+[done]
+I: Data, noise, and common covariances computed and set.
+#+end_example
+:end:
+** Plot Covariances
+#+begin_src python :async yes
+gte.activ2_data_cov.plot(gte.activ2_epochs.info)
+gte.activ2_noise_cov.plot(gte.activ2_epochs.info)
+gte.activ2_common_cov.plot(gte.activ2_epochs.info)
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+Computing rank from covariance with rank=None
+    Using tolerance 1.7e-12 (2.2e-16 eps * 61 dim * 1.3e+02  max singular value)
+    Estimated rank (eeg): 60
+    EEG: rank 60 computed from 61 data channels with 0 projectors
+Computing rank from covariance with rank=None
+    Using tolerance 1.2e-12 (2.2e-16 eps * 61 dim * 88  max singular value)
+    Estimated rank (eeg): 60
+    EEG: rank 60 computed from 61 data channels with 0 projectors
+Computing rank from covariance with rank=None
+    Using tolerance 1.5e-12 (2.2e-16 eps * 61 dim * 1.1e+02  max singular value)
+    Estimated rank (eeg): 60
+    EEG: rank 60 computed from 61 data channels with 0 projectors
+#+end_example
+| <Figure | size | 380x370 | with | 2 | Axes> | <Figure | size | 380x370 | with | 1 | Axes> |
+:end:
+** Filters
+#+begin_src python :async yes
+gte.compute_lcmv_filters()
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+Computing rank from covariance with rank=None
+    Using tolerance 1.7e-12 (2.2e-16 eps * 61 dim * 1.3e+02  max singular value)
+    Estimated rank (eeg): 60
+    EEG: rank 60 computed from 61 data channels with 1 projector
+Computing rank from covariance with rank=None
+    Using tolerance 1.2e-12 (2.2e-16 eps * 61 dim * 88  max singular value)
+    Estimated rank (eeg): 60
+    EEG: rank 60 computed from 61 data channels with 1 projector
+Making LCMV beamformer with rank {'eeg': 60}
+Computing inverse operator with 61 channels.
+    61 out of 61 channels remain after picking
+Selected 61 channels
+Whitening the forward solution.
+    Created an SSP operator (subspace dimension = 1)
+Computing rank from covariance with rank={'eeg': 60}
+    Setting small EEG eigenvalues to zero (without PCA)
+Creating the source covariance matrix
+Adjusting source covariance matrix.
+Computing beamformer filters for 8196 sources
+Filter computation complete
+Computing rank from covariance with rank=None
+    Using tolerance 1.7e-12 (2.2e-16 eps * 61 dim * 1.3e+02  max singular value)
+    Estimated rank (eeg): 60
+    EEG: rank 60 computed from 61 data channels with 1 projector
+Computing rank from covariance with rank=None
+    Using tolerance 1.2e-12 (2.2e-16 eps * 61 dim * 88  max singular value)
+    Estimated rank (eeg): 60
+    EEG: rank 60 computed from 61 data channels with 1 projector
+Making LCMV beamformer with rank {'eeg': 60}
+Computing inverse operator with 61 channels.
+    61 out of 61 channels remain after picking
+Selected 61 channels
+Whitening the forward solution.
+    Created an SSP operator (subspace dimension = 1)
+Computing rank from covariance with rank={'eeg': 60}
+    Setting small EEG eigenvalues to zero (without PCA)
+Creating the source covariance matrix
+Adjusting source covariance matrix.
+Computing beamformer filters for 8196 sources
+Filter computation complete
+I: LCMV beamformer filters computed for 2 conditions with pick_ori='vector' and weight_norm='unit-noise-gain-invariant'.
+#+end_example
+:end:
+** Apply LCMV Filters
+#+begin_src python :async yes
+gte.apply_lcmv_filters()
+#+end_src
+
+#+RESULTS:
+:results:
+: I: LCMV beamformer applied to 2 conditions. Source estimates stored in stcs property.
+:end:
+** Plot Activity
+#+begin_src python :async yes
+idx0 = 1
+idx0 = 0
+ev = list(gte.activ2_epochs.event_id.keys())[idx0]
+
+log0.warning(f"{gte.stcs[ev].shape = }")
+gte.stcs[ev].plot(
+    # hemi="rh",
+    hemi="split",
+    subjects_dir=gte.subjects_dir,
+    subject=gte.subject,
+    views=["lat", "med"],
+    time_label="LCMV source power in the 12-30 Hz frequency band",
+)
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+W: gte.stcs[ev].shape = (8196, 3, 1601)
+Using control points [0.36756688 0.47124662 3.86961154]
+#+end_example
+: <mne.viz._brain._brain.Brain at 0x7f5bf43d5100>
+:end:
+
+** Final Checkups
+#+begin_src python :async yes
+ddf(gte.story())
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+                         Name                                Declared Type      Actual Type  Is Optional
+0               _subjects_dir                       <class 'pathlib.Path'>        PosixPath         True
+1                    _subject                                <class 'str'>              str         True
+2                      _info0           <class 'mne._fiff.meas_info.Info'>             Info         True
+3                   _montage0    <class 'mne.channels.montage.DigMontage'>       DigMontage         True
+4                     _trans0           <class 'mne.transforms.Transform'>        Transform         True
+5                       _src0  <class 'mne.source_space._source_space.S...     SourceSpaces         True
+6                 _bem_model0                               <class 'list'>             list         True
+7              _bem_solution0             <class 'mne.bem.ConductorModel'>   ConductorModel         True
+8                       _fwd0        <class 'mne.forward.forward.Forward'>          Forward         True
+9         _genuine_noise_cov0                 <class 'mne.cov.Covariance'>       Covariance         True
+10                    _annot0                                <class 'str'>              str         True
+11                   _labels0                 typing.List[mne.label.Label]             list         True
+12              _label0_names                                <class 'str'>             list         True
+13                   _labels2                 typing.List[mne.label.Label]             list         True
+14              _label2_names                                <class 'str'>             list         True
+15                   _labels3                 typing.List[mne.label.Label]             None         True
+16              _label3_names                                <class 'str'>             None         True
+17                   _labels4                 typing.List[mne.label.Label]             list         True
+18              _label4_names                                <class 'str'>             list         True
+19        _singularity_events                      <class 'numpy.ndarray'>          ndarray         True
+20     _singularity_event_IDs                        typing.Dict[str, int]             dict         True
+21   _singularity_events_desc                        typing.Dict[int, str]             dict         True
+22     _singularity_events_df        <class 'pandas.core.frame.DataFrame'>        DataFrame         True
+23       _experimental_events                      <class 'numpy.ndarray'>          ndarray         True
+24    _experimental_event_IDs                        typing.Dict[str, int]             dict         True
+25  _experimental_events_desc                        typing.Dict[int, str]             dict         True
+26    _experimental_events_df        <class 'pandas.core.frame.DataFrame'>        DataFrame         True
+27                    _activ0  typing.Dict[str, typing.Dict[str, typing...             dict         True
+28             _activ0_labels                             typing.List[str]             list         True
+29             _activ0_events                             typing.List[str]             list         True
+30     _activ0_trial_num_samp                                <class 'int'>              int         True
+31                    _times0                      <class 'numpy.ndarray'>             None         True
+32          _source_simulator  <class 'mne.simulation.source.SourceSimu...  SourceSimulator         True
+33                _activ0_stc  <class 'mne.source_estimate.SourceEstima...   SourceEstimate         True
+34                _activ0_raw                <class 'mne.io.fiff.raw.Raw'>         RawArray         True
+35                _activ2_raw                <class 'mne.io.fiff.raw.Raw'>         RawArray         True
+36             _activ2_epochs                  <class 'mne.epochs.Epochs'>           Epochs         True
+37             _activ2_evoked          typing.Dict[str, mne.evoked.Evoked]             dict         True
+#+end_example
+:end:
+
+** Publish
+#+header: :async yes
+#+header: :eval yes
+#+header: :eval no
+#+header: :eval query
+#+begin_src python :async yes
+gte.publish()
+#+end_src
+* Checkups
+** MNE Plot: Source Space
+#+begin_src python :async yes
+gte.src0.plot(
+    head=False,
+    brain=None,
+    skull=False,
+    trans=gte.trans0,
+    subjects_dir=gte.subjects_dir)
+#+end_src
+
+#+RESULTS:
+:results:
+: <mne.viz.backends._pyvista.PyVistaFigure at 0x7f5bf42b76b0>
+:end:
+** MNE Plot: Alignment
+#+begin_src python :async yes
+mne.viz.close_all_3d_figures()
+fig = mne.viz.create_3d_figure(size=(600, 400), bgcolor=(0.00, 0.00, 0.00))
+src = None
+src = gte.src0   # get source positions
+fwd = gte.fwd0
+fwd = None  # get no quivers
+surfaces = ["white", "head"]
+mne.viz.plot_alignment(
+    info=gte.info0,
+    trans=gte.trans0,
+    subject=gte.subject,
+    subjects_dir=gte.subjects_dir,
+    surfaces=surfaces,
+    coord_frame="mri",
+    meg=(),
+    eeg=dict(original=0.2, projected=0.8),
+    fwd=fwd,
+    dig=False,
+    ecog=False,
+    src=src,
+    bem=gte.bem_model0,
+    mri_fiducials=True,
+    seeg=False,
+    fnirs=False,
+    show_axes=True,
+    dbs=False,
+    fig=fig,
+    interaction="terrain",
+    sensor_colors="magenta",
+    verbose=True)
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+Channel types::	eeg: 61
+Projecting sensors to the head surface
+#+end_example
+: <mne.viz.backends._pyvista.PyVistaFigure at 0x7f5be7761b80>
+:end:
+
+** MNE Plot: Brain, Head, Montage and Sources
+#+begin_src python :async yes
+hemi = "lh"
+hemi = "rh"
+hemi = "split"
+hemi = "both"
+
+surf = "inflated"
+surf = "pial"
+surf = "white"
+
+cortex = "high_contrast"
+cortex = "low_contrast"
+cortex = "classic"
+
+Brain = mne.viz.get_brain_class()
+brain = Brain(
+    subject=gte.subject,
+    hemi=hemi,
+    surf=surf,
+    cortex=cortex,
+    subjects_dir=gte.subjects_dir,
+    alpha=0.4,
+    size=(800, 600),
+)
+brain.add_annotation(gte.annot0, borders=False, alpha=1.0)
+brain.add_sensors(info=gte.info0, trans=gte.trans0, eeg=dict(original=0.2, projected=1.0))
+brain.add_forward(fwd=gte.fwd0, trans=gte.trans0)
+brain.add_head(dense=True, color="white", alpha=0.15)
+type(brain)
+#+end_src
+
+#+RESULTS:
+:results:
+#+begin_example
+Using phantomica-20240913T000907-head-dense.fif for head surface.
+    1 BEM surfaces found
+    Reading a surface...
+[done]
+    1 BEM surfaces read
+Channel types::	eeg: 61
+Projecting sensors to the head surface
+Using phantomica-20240913T000907-head-dense.fif for head surface.
+    1 BEM surfaces found
+    Reading a surface...
+[done]
+    1 BEM surfaces read
+#+end_example
+: mne.viz._brain._brain.Brain
+:end:
