@@ -26,3 +26,8 @@ sphinx_bootstrap_theme
 sphinx_autodoc_typehints
 
 pytest
+
+numpy
+pandas
+mne
+srsly
