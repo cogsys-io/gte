@@ -10,15 +10,13 @@ Great stuff!
 import random
 import numpy as np
 import pandas as pd
-import nibabel as nib
-import pathlib
 import mne
 from mne.simulation import SourceSimulator
 from mne.beamformer import Beamformer
 
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Optional, Union, List, Dict, Tuple
+from typing import Optional, Union, List, Dict, Tuple, Callable
 from typing import get_origin, get_args
 
 from .aux_log import Log0
@@ -137,20 +135,21 @@ class GTE:
     _montage0: Optional[mne.channels.DigMontage] = field(default=None, init=False)
     _trans0: Optional[mne.transforms.Transform] = field(default=None, init=False)
     _src0: Optional[mne.SourceSpaces] = field(default=None, init=False)
-    _bem_model0: Optional[list] = field(default=None, init=False)
+    _bem_model0: Optional[List[Dict]] = field(default=None, init=False)
+
     _bem_solution0: Optional[mne.bem.ConductorModel] = field(default=None, init=False)
     _fwd0: Optional[mne.Forward] = field(default=None, init=False)
-    _genuine_noise_cov0: Optional[mne.Covariance] = None
+    _genuine_noise_cov0: Optional[mne.Covariance] = field(default=None, init=False)
 
     _annot0: Optional[str] = field(default=None, init=False)
     _labels0: Optional[List[mne.Label]] = field(default=None, init=False)
-    _label0_names: Optional[str] = field(default=None, init=False)
     _labels2: Optional[List[mne.Label]] = field(default=None, init=False)
-    _label2_names: Optional[str] = field(default=None, init=False)
     _labels3: Optional[List[mne.Label]] = field(default=None, init=False)
-    _label3_names: Optional[str] = field(default=None, init=False)
     _labels4: Optional[List[mne.Label]] = field(default=None, init=False)
-    _label4_names: Optional[str] = field(default=None, init=False)
+    _label0_names: Optional[List[str]] = field(default=None, init=False)
+    _label2_names: Optional[List[str]] = field(default=None, init=False)
+    _label3_names: Optional[List[str]] = field(default=None, init=False)
+    _label4_names: Optional[List[str]] = field(default=None, init=False)
 
     _singularity_events: Optional[np.ndarray] = field(default=None, init=False)
     _singularity_event_IDs: Optional[Dict[str, int]] = field(default=None, init=False)
@@ -168,8 +167,8 @@ class GTE:
     )
     _activ0_labels: Optional[List[str]] = field(default=None, init=False)
     _activ0_events: Optional[List[str]] = field(default=None, init=False)
-    _activ0_trial_num_samp: Optional[int] = field(default=None, init=False)
-    _times0: Optional[np.ndarray] = field(default=None, init=False)
+    _activ0_trial_samp_total: Optional[int] = field(default=None, init=False)
+    _activ0_trial_times: Optional[np.ndarray] = field(default=None, init=False)
     _source_simulator: Optional[SourceSimulator] = field(default=None, init=False)
     _activ0_stc: Optional[mne.SourceEstimate] = field(default=None, init=False)
     _activ0_raw: Optional[mne.io.Raw] = field(default=None, init=False)
@@ -179,7 +178,7 @@ class GTE:
     _activ2_data_cov: Optional[mne.Covariance] = field(default=None, init=False)
     _activ2_noise_cov: Optional[mne.Covariance] = field(default=None, init=False)
     _activ2_common_cov: Optional[mne.Covariance] = field(default=None, init=False)
-    _filters: Optional[Dict[str, Beamformer]] = field(default=None, init=False)
+    _bf_filters: Optional[Dict[str, Beamformer]] = field(default=None, init=False)
     _stcs: Optional[Dict[str, mne.SourceEstimate]] = field(default=None, init=False)
 
     def __post_init__(self):
@@ -441,7 +440,7 @@ class GTE:
             raise RuntimeError(f"Error reading -src.fif file: {str(e)}")
 
     @property
-    def bem_model0(self) -> Optional[list]:
+    def bem_model0(self) -> Optional[List[Dict]]:
         """
         Get the MNE BEM model.
 
@@ -598,7 +597,7 @@ class GTE:
             raise RuntimeError(f"Error reading real noise covariance file: {str(e)}")
 
     @property
-    def annot0(self) -> str:
+    def annot0(self) -> Optional[str]:
         """
         Get the annotation string.
 
@@ -790,6 +789,8 @@ class GTE:
         leadz = len(str(total))
 
         for idx0, label0 in enumerate(self._labels0):
+            # Using mne.label.select_sources to get labels
+            # containing limited/restricted number of vertices
             label2 = mne.label.select_sources(
                 subject=self.subject,
                 label=label0,
@@ -797,7 +798,11 @@ class GTE:
                 extent=extent,
                 subjects_dir=self.subjects_dir,
             )
-            # TODO FIXME not here but in labels4 update
+            # CONSIDER: in labels4 we use name property so changing it here is
+            # currently not recommended, in future we may consider
+            # implementation based on "".endswith() "".startswith() or
+            # "".contains(), but it may also be more error prone
+            #
             # label2.name = f"source-label-{location}-{label0.name}"
             label2.name = label0.name
 
@@ -830,7 +835,7 @@ class GTE:
         ----------
         event_labels : int or list of str
             If int, number of unique events to generate. Event labels will be created
-            automatically as "Ev001", "Ev002", etc.
+            automatically as "Ev01", "Ev02", etc.
             If list of str, custom labels for events. Must be unique.
         event_repets : int
             Number of repetitions for each event.
@@ -846,11 +851,11 @@ class GTE:
             - Event onset (in samples)
             - Signal value of the immediately preceding sample
             - Event code
-        event_id : dict
+        event_IDs : dict
             Mapping of event labels to their corresponding values.
         event_desc : dict
             Mapping of event values to their corresponding labels.
-        df : pandas.DataFrame
+        events_df : pandas.DataFrame
             DataFrame containing event information with columns:
             - sample_num: Event onset (in samples)
             - preceding_val: Signal value of the immediately preceding sample
@@ -874,23 +879,21 @@ class GTE:
             If event_labels is a list of strings with non-unique elements.
         """
         if isinstance(event_labels, int):
-            n_events = event_labels
-            leadz = len(str(n_events + 1)) + 1
-            event_labels = [f"Ev{ii:0{leadz}d}" for ii in range(1, n_events + 1)]
-        elif isinstance(event_labels, list) and all(
-            isinstance(item, str) for item in event_labels
-        ):
-            assert len(event_labels) == len(
-                set(event_labels)
-            ), "'event_labels' must contain only unique strings"
-            n_events = len(event_labels)
+            num_events = event_labels
+            leadz = len(str(num_events + 1)) + 1
+            event_labels = [f"Ev{ii:0{leadz}d}" for ii in range(1, num_events + 1)]
+        elif isinstance(event_labels, list):
+            if all(isinstance(item, str) for item in event_labels):
+                if len(event_labels) != len(set(event_labels)):
+                    raise ValueError("'event_labels' must contain only unique strings")
+                num_events = len(event_labels)
         else:
             raise TypeError(
                 "'event_labels' must be either an integer or a list of strings"
             )
 
-        event_values = list(range(1, n_events + 1))
-        events_total = n_events * event_repets
+        event_values = list(range(1, num_events + 1))
+        events_total = num_events * event_repets
         log0.debug(f"event_values = {event_values}")
         log0.debug(f"event_labels = {event_labels}")
         log0.debug(f"event_repets = {event_repets}")
@@ -904,19 +907,19 @@ class GTE:
         np.random.shuffle(event_code)
 
         events = np.column_stack((event_samp, event_prec, event_code))
-        event_id = {key: val for key, val in zip(event_labels, event_values)}
+        event_IDs = {key: val for key, val in zip(event_labels, event_values)}
         event_desc = {val: key for key, val in zip(event_labels, event_values)}
 
-        df = pd.DataFrame(
+        events_df = pd.DataFrame(
             {
                 "sample_num": event_samp,
                 "preceding_val": event_prec,
                 "event_code": event_code,
             }
         )
-        df["event_labels"] = df.event_code.map(event_desc)
+        events_df["event_labels"] = events_df.event_code.map(event_desc)
 
-        return events, event_id, event_desc, df
+        return events, event_IDs, event_desc, events_df
 
     def make_singularity_events(
         self,
@@ -926,7 +929,7 @@ class GTE:
         event_begins: int = 5000,
     ):
         """
-        Generate singularity events and store them in the corresponding properties.
+        Generate singularity event(s) and store them in the corresponding properties.
 
         This method creates singularity events using the `make_dummy_events` method
         and stores the results in the class properties. By default, it generates
@@ -1230,7 +1233,7 @@ class GTE:
         """
         return self._experimental_events_df
 
-    def generate_waveform(
+    def generate_waveform_basic(
         self,
         times: np.ndarray,
         latency: float = 0.25,
@@ -1288,6 +1291,10 @@ class GTE:
         else:
             jitter = (sigma / 4.0) * np.random.rand()
 
+        # Example boundary check (CONSIDER implementing clip)
+        # jitter = min(max(jitter, -times.max()), times.max())
+        # jitter = np.clip(jitter, -sigma, sigma)
+
         gf = np.exp(-((times - latency - jitter) ** 2) / (2 * (sigma**2)))
 
         # Combine sinusoid and Gaussian, and scale to nanoamperes
@@ -1307,7 +1314,7 @@ class GTE:
         return self._activ0
 
     @property
-    def activ0_labels(self) -> List[str]:
+    def activ0_labels(self) -> Optional[List[str]]:
         """
         Get the sorted list of unique activation labels (brain regions).
 
@@ -1319,7 +1326,7 @@ class GTE:
         return self._activ0_labels
 
     @property
-    def activ0_events(self) -> List[str]:
+    def activ0_events(self) -> Optional[List[str]]:
         """
         Get the list of activation events.
 
@@ -1427,7 +1434,7 @@ class GTE:
         Parameters
         ----------
         num_labels : int
-            Total number of unique labels to sample from self._label0_names.
+            Total number of unique labels to (pre-)sample from self._label0_names.
         num_labels_per_event : int
             Number of labels to assign to each event.
         event_labels : int or List[str]
@@ -1478,37 +1485,49 @@ class GTE:
         # FIXME IMPORTANT
         """
         raise NotImplementedError(
-            "The 'publish' method is not implemented yet. Stay tuned for future updates!"
+            "The 'set_randomized_activations' method is not implemented yet. "
+            "Stay tuned for future updates!"
         )
         """
-
         # Validate inputs
+        # Also this code is by necessity repetition from the 'make_dummy_events'
+        # This is because we do not want to run it and update events before this
+        # function execution is guaranteed to succeed.
         if isinstance(event_labels, int):
             num_events = event_labels
             leadz = len(str(num_events + 1)) + 1
             event_names = [f"Ev{ii:0{leadz}d}" for ii in range(1, num_events + 1)]
-        elif isinstance(event_labels, list) and all(
-            isinstance(label, str) for label in event_labels
-        ):
-            event_names = event_labels
-            num_events = len(event_names)
+        elif isinstance(event_labels, list):
+            if all(isinstance(label, str) for label in event_labels):
+                event_names = event_labels
+                num_events = len(event_names)
+            else:
+                raise ValueError("If 'event_labels' are strings they must be unique")
         else:
             raise ValueError(
-                "event_labels must be either an integer or a list of strings"
+                "'event_labels' must be either an integer or a list of strings"
             )
 
         if len(self._label0_names) < num_labels:
             raise ValueError(
-                f"Not enough labels. Required: {num_labels}, Available: {len(self._label0_names)}"
+                f"Not enough labels to sample from. "
+                f"Required: {num_labels}, Available: {len(self._label0_names)}"
             )
 
-        if (
-            not allow_label_repetition
-            and num_labels_per_event * num_events > num_labels
-        ):
-            raise ValueError(
-                f"Too many labels per event. Max possible: {num_labels // num_events} when allow_label_repetition is False"
+        if allow_label_repetition:
+            sampled_labels = random.sample(self._label0_names, num_labels)
+        else:
+            if num_labels_per_event * num_events > num_labels:
+                raise ValueError(
+                    "Too many labels per event specified. "
+                    f"Max possible: {num_labels // num_events} "
+                    "when allow_label_repetition is False"
+                )
+            # Prevent label reuse across events
+            sampled_labels = random.sample(
+                self._label0_names, num_labels_per_event * num_events
             )
+            label_iterator = iter(sampled_labels)
 
         # Generate experimental events
         self.make_experimental_events(
@@ -1519,7 +1538,6 @@ class GTE:
         )
 
         # Sample labels
-        sampled_labels = random.sample(self._label0_names, num_labels)
 
         # Initialize the activations dictionary
         activations = {event: {} for event in event_names}
@@ -1529,8 +1547,10 @@ class GTE:
             if allow_label_repetition:
                 event_labels = random.choices(sampled_labels, k=num_labels_per_event)
             else:
-                event_labels = random.sample(sampled_labels, num_labels_per_event)
-
+                # event_labels = random.sample(sampled_labels, num_labels_per_event) # FIXED
+                event_labels = [
+                    next(label_iterator) for _ in range(num_labels_per_event)
+                ]
             for label in event_labels:
                 activations[event][label] = {
                     "lat": round(random.uniform(0.1, 0.4), 2),
@@ -1594,7 +1614,8 @@ class GTE:
         """
         if self._activ0 is None:
             raise ValueError(
-                "Activations have not been set. Use set_predefined_activations() first."
+                "Activations have not been set. Use set_predefined_activations() or "
+                "set_randomized_activations() first."
             )
 
         data = []
@@ -1613,7 +1634,7 @@ class GTE:
         return pd.DataFrame(data)
 
     @property
-    def activ0_trial_num_samp(self) -> int:
+    def activ0_trial_samp_total(self) -> int:
         """
         Get the number of samples for the activation trial.
 
@@ -1622,12 +1643,12 @@ class GTE:
         int
             The number of samples for the activation trial.
         """
-        if self._activ0_trial_num_samp is None:
-            self._activ0_trial_num_samp = 1000  # Default value
-        return self._activ0_trial_num_samp
+        if self._activ0_trial_samp_total is None:
+            self._activ0_trial_samp_total = 1000  # Default value
+        return self._activ0_trial_samp_total
 
-    @activ0_trial_num_samp.setter
-    def activ0_trial_num_samp(self, value: int):
+    @activ0_trial_samp_total.setter
+    def activ0_trial_samp_total(self, value: int):
         """
         Set the number of samples for the activation trial.
 
@@ -1636,10 +1657,10 @@ class GTE:
         value : int
             The number of samples to set for the activation trial.
         """
-        self._activ0_trial_num_samp = value
+        self._activ0_trial_samp_total = value
 
     @property
-    def times0(self) -> np.ndarray:
+    def activ0_trial_times(self) -> np.ndarray:
         """
         Get the times array.
 
@@ -1649,15 +1670,17 @@ class GTE:
             A 1D array of time points based on the number of samples and sampling frequency.
         """
         if self._info0 is None:
-            raise ValueError("The _info0 property must be set before accessing times0.")
+            raise ValueError(
+                "The _info0 property must be set before accessing activ0_trial_times."
+            )
 
         return (
-            np.arange(self._activ0_trial_num_samp, dtype=np.float64)
+            np.arange(self._activ0_trial_samp_total, dtype=np.float64)
             / self._info0["sfreq"]
         )
 
-    @times0.setter
-    def times0(self, value: np.ndarray):
+    @activ0_trial_times.setter
+    def activ0_trial_times(self, value: np.ndarray):
         """
         Set the times array. This should be calculated based on the activation trial sample count and info0.
 
@@ -1666,8 +1689,10 @@ class GTE:
         value : np.ndarray
             A new times array to set.
         """
-        raise NotImplementedError("The 'time0' setter method is not implemented yet.")
-        self._times0 = value
+        # self._activ0_trial_times = value
+        raise NotImplementedError(
+            "The 'activ0_trial_times' SETTER method is not implemented yet."
+        )
 
     @property
     def source_simulator(self) -> Optional[SourceSimulator]:
@@ -1762,7 +1787,11 @@ class GTE:
 
         for act_idx, (act_key, act_val) in enumerate(self._activ0.items()):
             # Get the event code corresponding to the activation key
-            act_code = self._experimental_event_IDs[act_key]
+            act_code = self._experimental_event_IDs.get(act_key)
+            if act_code is None:
+                raise ValueError(
+                    f"Activation key '{act_key}' not found in experimental_event_IDs."
+                )
             # Filter events for the current activation key
             tmp_events = self._experimental_events[
                 np.where(self._experimental_events[:, 2] == act_code)[0], :
@@ -1773,11 +1802,10 @@ class GTE:
             for lab_idx, (lab_name, lab_params) in enumerate(act_val.items()):
                 log0.warning(f"- {lab_idx}: {lab_name} --- {lab_params}")
 
-                # Find the corresponding label in the labels4x0 (self._labels4)
+                # Find the corresponding label in the labels4 (self._labels4)
                 tmp_label = [label for label in self._labels4 if label.name == lab_name]
-                assert (
-                    len(tmp_label) == 1
-                ), f"PROBLEM with label {lab_name!r} selection!"
+                if len(tmp_label) != 1:
+                    raise ValueError(f"PROBLEM with label {lab_name!r} selection!")
                 tmp_label = tmp_label[0]
                 log0.warning(f"  - {tmp_label = }")
 
@@ -1788,8 +1816,8 @@ class GTE:
                 log0.warning(f"  - {tmp_lat = }, {tmp_dur = }, {tmp_amp = }")
 
                 # Generate the waveform for this label's activation
-                tmp_wf = self.generate_waveform(
-                    times=self.times0,
+                tmp_wf = self.generate_waveform_basic(
+                    times=self.activ0_trial_times,
                     latency=tmp_lat,
                     duration=tmp_dur,
                     amplitude=tmp_amp,
@@ -1802,7 +1830,7 @@ class GTE:
                 )
 
     @property
-    def activ0_stc(self):
+    def activ0_stc(self) -> Optional[mne.SourceEstimate]:
         """
         Get the cached source time course (STC).
 
@@ -1842,7 +1870,7 @@ class GTE:
         self._activ0_stc = self._source_simulator.get_stc()
 
     @property
-    def activ0_raw(self):
+    def activ0_raw(self) -> Optional[mne.io.Raw]:
         """
         Get the cached time course (Raw).
 
@@ -1863,7 +1891,7 @@ class GTE:
         return self._activ0_raw
 
     @property
-    def activ2_raw(self):
+    def activ2_raw(self) -> Optional[mne.io.Raw]:
         """
         Get the cached time course (Raw) with noise added.
 
@@ -1899,10 +1927,18 @@ class GTE:
             raise ValueError(
                 "Source simulator is not initialized. Call initialize_source_simulator first."
             )
+        if self._info0 is None:
+            raise ValueError(
+                "Measurement info (_info0) must be set before simulating raw data."
+            )
+        if self._fwd0 is None:
+            raise ValueError(
+                "Forward solution (_fwd0) must be set before simulating raw data."
+            )
 
         self._activ0_raw = mne.simulation.simulate_raw(
             info=self._info0,
-            stc=self._source_simulator,
+            stc=self._source_simulator,  # an instance of mne.SourceEstimate or mne.simulation.SourceSimulator
             src=None,  # Can be None if forward is provided.
             bem=None,  # Can be None if forward is provided.
             forward=self._fwd0,
@@ -1931,7 +1967,7 @@ class GTE:
         """
         if self._activ0_raw is None:
             raise ValueError(
-                "Clean _activ0_raw data is not initialized. Call extract_activ2_raw first."
+                "Clean _activ0_raw data is not initialized. Call extract_activ0_raw first."
             )
 
         self._activ2_raw = self._activ0_raw.copy()
@@ -1943,7 +1979,7 @@ class GTE:
             mne.simulation.add_ecg(self._activ2_raw, random_state=0)
 
     @property
-    def activ2_epochs(self):
+    def activ2_epochs(self) -> Optional[mne.Epochs]:
         """
         Get the cached time course (Epochs).
 
@@ -1964,7 +2000,7 @@ class GTE:
         return self._activ2_epochs
 
     @property
-    def activ2_evoked(self):
+    def activ2_evoked(self) -> Optional[Dict[str, mne.Evoked]]:
         """
         Get the cached time course (Evoked).
 
@@ -1984,7 +2020,15 @@ class GTE:
             )
         return self._activ2_evoked
 
-    def extract_activ2_epochs_and_evoked(self):
+    def extract_activ2_epochs_and_evoked(
+        self,
+        tmin: float = -0.4,  # Added as parameter
+        tmax: float = 1.2,  # Added as parameter
+        baseline: Tuple[Optional[float], Optional[float]] = (
+            None,
+            0,
+        ),
+    ):
         """
         Extract epochs.
 
@@ -2002,9 +2046,9 @@ class GTE:
             self._activ2_raw,
             self._experimental_events,
             self._experimental_event_IDs,
-            tmin=-0.4,  # TODO FIXME Add this as an argument
-            tmax=1.2,  # TODO FIXME Add this as an argument
-            baseline=(None, 0),  # TODO FIXME Add this as an argument
+            tmin=tmin,  # Use parameter
+            tmax=tmax,  # Use parameter
+            baseline=baseline,  # Use parameter
         )
 
         self._activ2_evoked = {}
@@ -2052,7 +2096,7 @@ class GTE:
         data_tmin: float = 0.01,
         data_tmax: float = 0.60,
         noise_tmin: Optional[float] = None,
-        noise_tmax: float = 0,
+        noise_tmax: float = 0,  # This value is reasonably set to the onset of trial/stimuli
         method: str = "empirical",
     ):
         """
@@ -2099,7 +2143,7 @@ class GTE:
         log0.info("Data, noise, and common covariances computed and set.")
 
     @property
-    def filters(self) -> Optional[Dict[str, Beamformer]]:
+    def bf_filters(self) -> Optional[Dict[str, Beamformer]]:
         """
         Get the LCMV beamformer filters.
 
@@ -2109,7 +2153,7 @@ class GTE:
             Dictionary of LCMV beamformer filters for each condition, or None if not computed.
             Each filter is an instance of mne.beamformer.Beamformer.
         """
-        return self._filters
+        return self._bf_filters
 
     @property
     def stcs(self) -> Optional[Dict[str, mne.SourceEstimate]]:
@@ -2123,12 +2167,12 @@ class GTE:
         """
         return self._stcs
 
-    def compute_lcmv_filters(
+    def compute_lcmv_bf_filters(
         self,
         pick_ori: str = "vector",
         weight_norm: str = "unit-noise-gain-invariant",
         reg: float = 0.05,
-        lcmv_func: callable = mne.beamformer.make_lcmv,
+        make_lcmv_func: Callable = mne.beamformer.make_lcmv,
     ):
         """
         Compute LCMV beamformer filters for each condition in _activ2_evoked.
@@ -2150,7 +2194,7 @@ class GTE:
         Notes
         -----
         This method computes LCMV beamformer filters (mne.beamformer.Beamformer objects)
-        for each condition and stores them in the _filters attribute.
+        for each condition and stores them in the _bf_filters attribute.
         The default parameters are set to:
         - pick_ori: "vector" for vector beamformer
         - weight_norm: "unit-noise-gain-invariant" for unit-noise gain beamformer
@@ -2165,25 +2209,27 @@ class GTE:
                 "Evoked data, forward solution, and covariances must be set before computing filters."
             )
 
-        self._filters = {}
+        self._bf_filters = {}
         for key, val in self._activ2_evoked.items():
-            self._filters[key] = lcmv_func(
+            self._bf_filters[key] = make_lcmv_func(
                 info=val.info,
                 forward=self._fwd0,
                 data_cov=self._activ2_data_cov,
-                reg=reg,
                 noise_cov=self._activ2_noise_cov,
                 pick_ori=pick_ori,
                 weight_norm=weight_norm,
+                reg=reg,
                 rank=None,
             )
 
         log0.info(
-            f"LCMV beamformer filters computed for {len(self._filters)} conditions "
+            f"LCMV beamformer filters computed for {len(self._bf_filters)} conditions "
             f"with pick_ori='{pick_ori}' and weight_norm='{weight_norm}'."
         )
 
-    def apply_lcmv_filters(self):
+    def apply_lcmv_bf_filters(
+        self, apply_lcmv_func: Callable = mne.beamformer.apply_lcmv
+    ):
         """
         Apply LCMV beamformer filters to the evoked data and store the results.
 
@@ -2199,23 +2245,21 @@ class GTE:
         -----
         The resulting source estimates can be accessed via the stcs property after calling this method.
         """
-        if self._filters is None or self._activ2_evoked is None:
+        if self._bf_filters is None or self._activ2_evoked is None:
             raise ValueError(
                 "Filters and evoked data must be set before applying filters."
             )
 
         self._stcs = {}
-        for key, filter in self._filters.items():
-            self._stcs[key] = mne.beamformer.apply_lcmv(
-                self._activ2_evoked[key], filter
-            )
+        for key, bf_filter in self._bf_filters.items():
+            self._stcs[key] = apply_lcmv_func(self._activ2_evoked[key], bf_filter)
 
         log0.info(
             f"LCMV beamformer applied to {len(self._stcs)} conditions. "
             "Source estimates stored in stcs property."
         )
 
-    def story(self) -> pd.DataFrame:
+    def list_properties(self) -> pd.DataFrame:
         """
         List all properties of the GTE dataclass object with their declared and actual types.
 
