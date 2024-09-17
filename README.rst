@@ -24,7 +24,19 @@ gte: ground truth establisher
 Features
 --------
 
-* TODO
+.. image:: img/screenshot-from-2024-09-15-07-57-02.png
+   :width: 400
+   :alt: Alternative text for the image
+.. image:: img/screenshot-from-2024-09-17-08-04-55.png
+   :width: 400
+   :alt: Alternative text for the image
+.. image:: img/screenshot-from-2024-09-17-08-05-25.png
+   :width: 400
+   :alt: Alternative text for the image
+.. image:: img/screenshot-from-2024-09-17-08-06-24.png
+   :width: 400
+   :alt: Alternative text for the image
+
 
 Credits
 -------
