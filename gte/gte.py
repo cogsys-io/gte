@@ -1559,14 +1559,38 @@ class GTE:
 
         Returns
         -------
-        pd.DataFrame
-            A DataFrame representation of the activations, with columns:
-            'Event', 'Region', 'Latency', 'Duration', 'Amplitude'
+        pandas.DataFrame
+            A DataFrame representation of the activations.
+            The DataFrame has the following columns:
+
+            - Event : str
+                The name of the event.
+            - Region : str
+                The name of the brain region.
+            - Latency : float
+                The latency of the activation in seconds.
+            - Duration : float
+                The duration of the activation in seconds.
+            - Amplitude : float
+                The amplitude of the activation.
 
         Raises
         ------
         ValueError
             If activations have not been set (activ0 is None).
+
+        Notes
+        -----
+        This method assumes that the activations have been previously set
+        using the `set_predefined_activations` method or a similar mechanism.
+
+        Examples
+        --------
+        >>> gte = GTE()
+        >>> gte.set_predefined_activations(...)
+        >>> df = gte.activations_to_dataframe()
+        >>> print(df.head())
+
         """
         if self._activ0 is None:
             raise ValueError(
