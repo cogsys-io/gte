@@ -36,7 +36,27 @@ Features
 .. image:: img/screenshot-from-2024-09-17-08-06-24.png
    :width: 400
    :alt: Alternative text for the image
-
+.. image:: img/screenshot-from-2024-09-18-02-01-49.png
+   :width: 400
+   :alt: Alternative text for the image
+.. image:: img/screenshot-from-2024-09-18-02-02-23.png
+   :width: 400
+   :alt: Alternative text for the image
+.. image:: img/screenshot-from-2024-09-18-02-02-58.png
+   :width: 400
+   :alt: Alternative text for the image
+.. image:: img/screenshot-from-2024-09-18-02-03-12.png
+   :width: 400
+   :alt: Alternative text for the image
+.. image:: img/screenshot-from-2024-09-18-02-03-23.png
+   :width: 400
+   :alt: Alternative text for the image
+.. image:: img/screenshot-from-2024-09-18-02-03-34.png
+   :width: 400
+   :alt: Alternative text for the image
+.. image:: img/screenshot-from-2024-09-18-02-04-25.png
+   :width: 400
+   :alt: Alternative text for the image
 
 Credits
 -------
