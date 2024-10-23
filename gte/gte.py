@@ -1965,6 +1965,7 @@ class GTE:
         ValueError
             If the source simulator is not initialized or if no data is available in the simulator.
         """
+        # TODO FIXME Add random random state
         if self._activ0_raw is None:
             raise ValueError(
                 "Clean _activ0_raw data is not initialized. Call extract_activ0_raw first."
